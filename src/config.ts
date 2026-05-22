@@ -22,7 +22,7 @@ export const siteConfig: SiteConfig = {
 	keywords: ["RunRun", "润", "Xiao润", "XiaoHu", "博客", "RunRunxka Blog", "Blog", "SaSa"],
 	lang: "zh_CN", // 'en', 'zh_CN', 'zh_TW', 'ja', 'ko', 'es', 'th'
 	themeColor: {
-		hue: 210, // Default hue for the theme color, from 0 to 360. e.g. red: 0, teal: 200, cyan: 250, pink: 345
+		hue: 0, // Default hue for the theme color, from 0 to 360. e.g. red: 0, teal: 200, cyan: 250, pink: 345
 		fixed: false, // Hide the theme color picker for visitors
 	},
 	banner: {
