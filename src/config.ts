@@ -146,8 +146,8 @@ export const imageFallbackConfig: ImageFallbackConfig = {
 
 export const umamiConfig: UmamiConfig = {
 	enable: true,
-	baseUrl: "https://u.xiegao.top",
-	shareId: "IoWiNCvTUPxaDg5x",
+	baseUrl: "https://cloud.umami.is",
+	shareId: "JX2ugc1owxm4gidL",
 	timezone: "Asia/Shanghai",
 };
 
