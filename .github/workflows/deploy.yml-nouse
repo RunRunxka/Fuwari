@@ -1,40 +1,47 @@
-name: Build & Deploy
-
+name: 构建并发布到page分支
 on:
   push:
-    branches: [main]
-  workflow_dispatch:  # 支持手动触发
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
         with:
-          node-version: 22
-          cache: pnpm
+          version: 9
 
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-
-      - name: Deploy to server
-        uses: easingthemes/ssh-deploy@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          ARGS: "-rlgoDzvc --delete"
-          SOURCE: "dist/"
-          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
-          REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          TARGET: "/home/admin/blog"
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
       - name: Deploy to page branch
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+          publish_branch: page
+          cname: blog.acofork.com
+          commit_message: ${{ github.event.head_commit.message }}          publish_dir: ./dist
           publish_branch: page
           cname: blog.acofork.com
           commit_message: ${{ github.event.head_commit.message }}
