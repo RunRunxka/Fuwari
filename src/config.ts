@@ -105,7 +105,7 @@ export const navBarConfig: NavBarConfig = {
 };
 
 export const profileConfig: ProfileConfig = {
-	avatar: touxiang,
+	avatar: touxiang.src,
 	name: "Run",
 	bio: "Protect What You Love.",
 	links: [
