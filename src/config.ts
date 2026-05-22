@@ -12,13 +12,13 @@ import { LinkPreset } from "./types/config";
 
 export const siteConfig: SiteConfig = {
 	
-	title: "XieGao Blog",
+	title: "RunRunxka's Blog",
 	subtitle: "技术分享与实践",
 	description:
-		"雪xie高是一个专注于IT/互联网技术分享与实践的个人技术博客，在这里你可以找到众多前沿技术的分享与实践经验。",
+		"RunRunxka's Blog是一个专注于IT/互联网技术分享与实践的个人技术博客，在这里你可以找到众多前沿技术的分享与实践经验。",
 
 
-	keywords: ["雪xie高", "雪高", "雪", "xiegao", "博客", "XieGao Blog", "Blog", "xuegao"],
+	keywords: ["RunRun", "润", "Xiao润", "XiaoHu", "博客", "RunRunxka Blog", "Blog", "SaSa"],
 	lang: "zh_CN", // 'en', 'zh_CN', 'zh_TW', 'ja', 'ko', 'es', 'th'
 	themeColor: {
 		hue: 210, // Default hue for the theme color, from 0 to 360. e.g. red: 0, teal: 200, cyan: 250, pink: 345
@@ -52,14 +52,14 @@ export const siteConfig: SiteConfig = {
 	favicon: [
 		// Leave this array empty to use the default favicon
 		{
-			src: "https://q2.qlogo.cn/headimg_dl?dst_uin=3764350108&spec=0", // Path of the favicon, relative to the /public directory
+			src: '/favicon/touxiang.png', // Path of the favicon, relative to the /public directory
 			//   theme: 'light',              // (Optional) Either 'light' or 'dark', set only if you have different favicons for light and dark mode
-			//   sizes: '32x32',              // (Optional) Size of the favicon, set only if you have favicons of different sizes
+			sizes: '32x32',              // (Optional) Size of the favicon, set only if you have favicons of different sizes
 		},
 	],
 	officialSites: [
-		{ url: "https://xiegao.top", alias: "CN" },
-		{ url: "https://xiegao.top", alias: "Global" },
+		{ url: "http://8.137.196.229:5544", alias: "CN" },
+		{ url: "http://8.137.196.229:5544", alias: "Global" },
 	],
 	server: [
 		{ url: "", text: "Blog" },
@@ -90,13 +90,13 @@ export const navBarConfig: NavBarConfig = {
 		},
 		{
 			name: "统计",
-			url: "https://u.xiegao.top/share/IoWiNCvTUPxaDg5x",
+			url: "null",
 			external: true,
 			icon: "material-symbols:table-chart",
 		},
 		{
 			name: "云盘",
-			url: "https://pan.xiegao.top",
+			url: "null",
 			external: true,
 			icon: "material-symbols:cloud-outline",
 		},
@@ -104,29 +104,29 @@ export const navBarConfig: NavBarConfig = {
 };
 
 export const profileConfig: ProfileConfig = {
-	avatar: "https://q2.qlogo.cn/headimg_dl?dst_uin=3764350108&spec=0", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
-	name: "雪xie高",
+	avatar: 'assets/images/touxiang.png', // Relative to the /src directory. Relative to the /public directory if it starts with '/'
+	name: "Run",
 	bio: "Protect What You Love.",
 	links: [
 		{
 			name: "QQ",
 			icon: "qq", // Local icon
-			url: "https://qm.qq.com/q/vnq8axQlPy",
+			url: "https://qm.qq.com/q/K8ORICe7my",
 		},
 		{
 			name: "Telegram",
 			icon: "telegram", // Local icon
-			url: "https://t.me/xuexgao",
+			url: "https://t.me/RunR788",
 		},
 		{
 			name: "Bilibli",
 			icon: "bilibili", // Local icon
-			url: "https://space.bilibili.com/2083649546",
+			url: "https://space.bilibili.com/501724619",
 		},
 		{
 			name: "GitHub",
 			icon: "github", // Local icon
-			url: "https://github.com/XuexGao",
+			url: "https://github.com/RunRunxka",
 		},
 	],
 };
