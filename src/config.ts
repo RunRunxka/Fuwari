@@ -97,7 +97,7 @@ export const navBarConfig: NavBarConfig = {
 		},
 		{
 			name: "云盘",
-			url: "null",
+			url: "http://8.137.196.229:5244",
 			external: true,
 			icon: "material-symbols:cloud-outline",
 		},
