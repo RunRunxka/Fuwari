@@ -405,3 +405,40 @@ html.light .expressive-code .frame .code-expand-btn {
 html.light #navbar .card-base {
     border-color: rgba(0, 0, 0, 0.08);
 }
+
+/* ===== 浅色主题 — 全局文字/背景覆盖 ===== */
+html.light .text-white,
+html.light .text-white\/90,
+html.light .text-white\/80,
+html.light .text-white\/75,
+html.light .text-white\/70,
+html.light .text-white\/60,
+html.light .text-white\/50,
+html.light .text-white\/30,
+html.light .text-white\/25,
+html.light .text-white\/20,
+html.light .text-white\/10,
+html.light [class*="text-white\/"],
+html.light [class*="text-white "] {
+    color: rgb(23, 23, 23);
+}
+
+html.light .text-white\/90 { color: rgba(23, 23, 23, 0.90); }
+html.light .text-white\/80 { color: rgba(23, 23, 23, 0.80); }
+html.light .text-white\/75 { color: rgba(23, 23, 23, 0.75); }
+html.light .text-white\/70 { color: rgba(23, 23, 23, 0.70); }
+html.light .text-white\/60 { color: rgba(23, 23, 23, 0.60); }
+html.light .text-white\/50 { color: rgba(23, 23, 23, 0.50); }
+html.light .text-white\/30 { color: rgba(23, 23, 23, 0.30); }
+html.light .text-white\/25 { color: rgba(23, 23, 23, 0.25); }
+html.light .text-white\/20 { color: rgba(23, 23, 23, 0.20); }
+html.light .text-white\/10 { color: rgba(23, 23, 23, 0.10); }
+
+html.light .bg-white\/5  { background-color: rgba(0, 0, 0, 0.03); }
+html.light .bg-white\/10 { background-color: rgba(0, 0, 0, 0.06); }
+
+html.light .text-neutral-100 { color: rgb(64, 64, 64); }
+
+/* 浅色下 fill 覆盖 */
+html.light .fill-white,
+html.light .fill-white\/75 { fill: rgba(23, 23, 23, 0.75); }

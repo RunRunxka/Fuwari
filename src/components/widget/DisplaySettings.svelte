@@ -54,9 +54,16 @@ function applyTheme(mode: string) {
 	showThemeDropdown = false;
 
 	const html = document.documentElement;
-	const isDark = resolveEffectiveTheme();
+	let isDark: boolean;
+	if (mode === DARK_MODE) {
+		isDark = true;
+	} else if (mode === LIGHT_MODE) {
+		isDark = false;
+	} else {
+		isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+	}
 
-	if (isDark === "dark") {
+	if (isDark) {
 		html.classList.add("dark");
 		html.classList.remove("light");
 		html.setAttribute("data-theme", "github-dark");
@@ -69,7 +76,7 @@ function applyTheme(mode: string) {
 	// 通知 Giscus 切换主题
 	const frame = document.querySelector("iframe.giscus-frame") as HTMLIFrameElement | null;
 	if (frame?.contentWindow) {
-		const giscusTheme = isDark === "dark" ? "dark" : "light";
+		const giscusTheme = isDark ? "dark" : "light";
 		frame.contentWindow.postMessage(
 			{ giscus: { setConfig: { theme: giscusTheme } } },
 			"https://giscus.app",
@@ -171,7 +178,7 @@ onMount(() => {
 
     <!-- 主题模式 -->
     <div class="flex flex-row gap-2 mb-3 items-center justify-between">
-        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+        <div class="flex gap-2 font-bold text-lg text-[var(--btn-content)] transition relative ml-3
             before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
             before:absolute before:-left-3 before:top-[0.33rem]"
         >
@@ -211,7 +218,7 @@ onMount(() => {
     {/if}
 
     <div class="flex flex-row gap-2 mb-3 items-center justify-between">
-        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+        <div class="flex gap-2 font-bold text-lg text-[var(--btn-content)] transition relative ml-3
             before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
             before:absolute before:-left-3 before:top-[0.33rem]"
         >
@@ -237,7 +244,7 @@ onMount(() => {
     </div>
 
     <div class="flex flex-row gap-2 mb-3 items-center justify-between">
-        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+        <div class="flex gap-2 font-bold text-lg text-[var(--btn-content)] transition relative ml-3
             before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
             before:absolute before:-left-3 before:top-[0.33rem]"
         >
@@ -247,7 +254,7 @@ onMount(() => {
     </div>
 
     <div class="flex flex-row gap-2 mb-3 items-center justify-between">
-        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+        <div class="flex gap-2 font-bold text-lg text-[var(--btn-content)] transition relative ml-3
             before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
             before:absolute before:-left-3 before:top-[0.33rem]"
         >
@@ -258,7 +265,7 @@ onMount(() => {
 
     {#if isRainbowMode}
     <div class="flex flex-row gap-2 mb-3 items-center justify-between transition-all" >
-        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+        <div class="flex gap-2 font-bold text-lg text-[var(--btn-content)] transition relative ml-3
             before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
             before:absolute before:-left-3 before:top-[0.33rem]"
         >
@@ -278,7 +285,7 @@ onMount(() => {
     {/if}
 
     <div class="flex flex-row gap-2 mb-3 mt-3 items-center justify-between">
-        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+        <div class="flex gap-2 font-bold text-lg text-[var(--btn-content)] transition relative ml-3
             before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
             before:absolute before:-left-3 before:top-[0.33rem]"
         >
@@ -298,7 +305,7 @@ onMount(() => {
     </div>
 
     <div class="flex flex-row gap-2 mb-3 mt-3 items-center justify-between">
-        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+        <div class="flex gap-2 font-bold text-lg text-[var(--btn-content)] transition relative ml-3
             before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
             before:absolute before:-left-3 before:top-[0.33rem]"
         >
@@ -309,7 +316,7 @@ onMount(() => {
 
     {#if isDevMode}
     <div class="flex flex-row gap-2 mb-3 items-center justify-between transition-all" >
-        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+        <div class="flex gap-2 font-bold text-lg text-[var(--btn-content)] transition relative ml-3
             before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
             before:absolute before:-left-3 before:top-[0.33rem]"
         >
