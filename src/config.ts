@@ -157,7 +157,7 @@ export const expressiveCodeConfig: ExpressiveCodeConfig = {
 
 export const gitHubEditConfig: GitHubEditConfig = {
 	enable: true,
-	baseUrl: "https://github.com/XuexGao/Fuwari/blob/main/src/content/posts",
+	baseUrl: "https://github.com/RunRunxka/Fuwari/blob/main/src/content/posts",
 };
 
 // todoConfig removed from here
