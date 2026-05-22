@@ -84,35 +84,17 @@ const className = Astro.props.class;
     }
 
     async function fetchPageViews() {
-        const websiteId = "deab46e5-8d58-4902-8f0f-51746802481d";
-        const baseUrl = "https://gateway-us.umami.dev";
-        const shareId = "JX2ugc1owxm4gidL";
-
         try {
-            const tokenRes = await fetch(`${baseUrl}/api/share/${shareId}`);
-            if (!tokenRes.ok) return;
-            const tokenData = await tokenRes.json();
-            const token = tokenData.token;
-
-            const url = `${baseUrl}/api/websites/${websiteId}/stats?path=/posts/${slug}/&startAt=0&endAt=${Date.now()}`;
-            const response = await fetch(url, {
-                headers: { 'x-umami-share-token': token }
-            });
-            if (!response.ok) return;
-            const data = await response.json();
+            const res = await fetch('/api/counter');
+            if (!res.ok) return;
+            const data = await res.json();
 
             const viewsElement = document.getElementById(`page-views-${slug}`);
-            if (viewsElement) {
-                let views = 0;
-                if (typeof data.pageviews === 'number') {
-                    views = data.pageviews;
-                } else if (data.pageviews && data.pageviews.value) {
-                    views = data.pageviews.value;
-                }
-                animateValue(viewsElement, 0, views, 800, " 次");
+            if (viewsElement && data.pageviews !== undefined) {
+                animateValue(viewsElement, 0, data.pageviews, 800, " 次");
             }
         } catch (error) {
-            console.warn('Umami PV fetch failed.', error);
+            console.warn('PV fetch failed.', error);
         }
     }
 

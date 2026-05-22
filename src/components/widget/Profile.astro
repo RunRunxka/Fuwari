@@ -96,36 +96,20 @@ for (const post of posts) {
         window.requestAnimationFrame(step);
     }
 
-    // 完美保留你自己的 Umami 获取逻辑
+    // 使用自建计数器 API
+    let countIncremented = false;
     async function loadSiteStats() {
-        const websiteId = "deab46e5-8d58-4902-8f0f-51746802481d";
-        const baseUrl = "https://gateway-us.umami.dev";
-        const shareId = "JX2ugc1owxm4gidL";
-        
         try {
-            const tokenRes = await fetch(`${baseUrl}/api/share/${shareId}`);
-            if (!tokenRes.ok) return;
-            const tokenData = await tokenRes.json();
-            const token = tokenData.token;
-
-            const url = `${baseUrl}/api/websites/${websiteId}/stats?startAt=0&endAt=${Date.now()}`;
-            const res = await fetch(url, {
-                headers: { 'x-umami-share-token': token }
-            });
+            // 首次访问时递增计数
+            const apiPath = countIncremented ? '/api/counter' : '/api/counter/increment';
+            const res = await fetch(apiPath);
             if (!res.ok) return;
             const data = await res.json();
-            
+            countIncremented = true;
+
             const el = document.getElementById('site-views');
-            if (el) {
-                let views = 0;
-                if (data.pageviews && typeof data.pageviews === 'object' && data.pageviews.value !== undefined) {
-                    views = data.pageviews.value;
-                } else if (data.pageviews !== undefined) {
-                    views = data.pageviews;
-                }
-                
-                // 触发数字滚动
-                animateValue(el, 0, views, 800);
+            if (el && data.pageviews !== undefined) {
+                animateValue(el, 0, data.pageviews, 800);
             }
         } catch (e) { 
             console.warn("Site Stats Error", e);
