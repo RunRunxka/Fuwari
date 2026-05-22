@@ -15,6 +15,7 @@ import {
 	setHideBg,
 	setHue,
 	setTheme,
+	setThemeMode,
 } from "../utils/setting-utils";
 import { url, pathsEqual } from "../utils/url-utils";
 
@@ -129,6 +130,22 @@ function init() {
 
 init();
 bindPostInlineDiff();
+
+// DOM 事件委托：主题切换（兜底 Svelte client:only 水合延迟）
+document.addEventListener("click", (e) => {
+	const target = e.target as HTMLElement;
+	const btn = target.closest("[data-theme-action]") as HTMLElement | null;
+	if (!btn) return;
+
+	const action = btn.getAttribute("data-theme-action");
+	if (action === "apply") {
+		const mode = btn.getAttribute("data-theme-mode");
+		if (mode) {
+			setThemeMode(mode);
+			setTheme();
+		}
+	}
+});
 
 const setup = () => {
 	const SORT_PATHS = [

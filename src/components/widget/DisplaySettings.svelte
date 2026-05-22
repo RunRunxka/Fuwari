@@ -187,6 +187,7 @@ onMount(() => {
         <button
             aria-label="切换主题模式"
             class="btn-regular rounded-md h-7 px-3 flex items-center gap-1.5 text-sm font-medium active:scale-95"
+            data-theme-action="dropdown"
             onclick={() => (showThemeDropdown = !showThemeDropdown)}
         >
             <Icon icon={themeModeIcons[themeMode]} class="text-[0.95rem]" />
@@ -203,6 +204,8 @@ onMount(() => {
         {#each [SYSTEM_MODE, DARK_MODE, LIGHT_MODE] as mode}
             <button
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition text-left hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)] {themeMode === mode ? 'bg-[var(--btn-plain-bg-hover)]' : ''}"
+                data-theme-action="apply"
+                data-theme-mode={mode}
                 onclick={() => applyTheme(mode)}
             >
                 <Icon icon={themeModeIcons[mode]} class="text-[1.1rem] text-[var(--primary)] shrink-0" />
