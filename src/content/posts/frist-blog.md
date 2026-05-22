@@ -1,10 +1,11 @@
-<hr>
-<h2>title: 从零部署 Fuwari 博客到阿里云服务器
+title: 从零部署 Fuwari 博客到阿里云服务器
 published: 2026-05-22
 description: 完整记录 Fuwari Astro 博客从搭建、GitHub Actions 自动部署到阿里云 ECS、配置域名与自定义的全过程。
 tags: [博客, Astro, GitHub Actions, 部署, Fuwari]
 category: 教程
-draft: false</h2>
+draft: false
+
+</h2>
 <h2>起因</h2>
 <p>一直想搭一个自己的博客，选了 Fuwari 这个 Astro 静态博客主题。服务器是阿里云 ECS（1.8G 内存），但是本地构建需要 7G+ 内存，服务器直接 <code>pnpm build</code> 会 OOM。所以需要一套 GitHub Actions 自动构建 + 部署的流程。</p>
 <h2>环境一览</h2>
