@@ -9,6 +9,8 @@ import {
 	getHue,
 	getRainbowMode,
 	getRainbowSpeed,
+	getThemeMode,
+	resolveEffectiveTheme,
 	setBgBlur,
 	setDevMode,
 	setDevServer,
@@ -16,8 +18,10 @@ import {
 	setHue,
 	setRainbowMode,
 	setRainbowSpeed,
+	setThemeMode,
 } from "@utils/setting-utils";
 import { onMount } from "svelte";
+import { DARK_MODE, LIGHT_MODE, SYSTEM_MODE } from "@constants/constants";
 
 const isBrowser = typeof document !== "undefined";
 const defaultHue = isBrowser ? getDefaultHue() : 250;
@@ -29,6 +33,49 @@ let bgBlur = isBrowser ? getBgBlur() : 4;
 let hideBg = isBrowser ? getHideBg() : false;
 let isDevMode = isBrowser ? getDevMode() : false;
 let devServer = isBrowser ? getDevServer() : "";
+let themeMode = isBrowser ? getThemeMode() : SYSTEM_MODE;
+let showThemeDropdown = false;
+
+const themeModeLabels = {
+	[SYSTEM_MODE]: "跟随系统",
+	[DARK_MODE]: "暗色主题",
+	[LIGHT_MODE]: "日间主题",
+};
+
+const themeModeIcons = {
+	[SYSTEM_MODE]: "material-symbols:settings-brightness",
+	[DARK_MODE]: "material-symbols:dark-mode",
+	[LIGHT_MODE]: "material-symbols:light-mode",
+};
+
+function applyTheme(mode: string) {
+	themeMode = mode;
+	setThemeMode(mode);
+	showThemeDropdown = false;
+
+	const html = document.documentElement;
+	const isDark = resolveEffectiveTheme();
+
+	if (isDark === "dark") {
+		html.classList.add("dark");
+		html.classList.remove("light");
+		html.setAttribute("data-theme", "github-dark");
+	} else {
+		html.classList.remove("dark");
+		html.classList.add("light");
+		html.setAttribute("data-theme", "github-light");
+	}
+
+	// 通知 Giscus 切换主题
+	const frame = document.querySelector("iframe.giscus-frame") as HTMLIFrameElement | null;
+	if (frame?.contentWindow) {
+		const giscusTheme = isDark === "dark" ? "dark" : "light";
+		frame.contentWindow.postMessage(
+			{ giscus: { setConfig: { theme: giscusTheme } } },
+			"https://giscus.app",
+		);
+	}
+}
 
 function resetHue() {
 	hue = getDefaultHue();
@@ -89,21 +136,79 @@ function onSpeedChange() {
 	}
 }
 
+// 监听系统主题变化（当 themeMode 为 system 时）
+function watchSystemTheme() {
+	const mq = window.matchMedia("(prefers-color-scheme: dark)");
+	mq.addEventListener("change", () => {
+		if (getThemeMode() !== SYSTEM_MODE) return;
+		const html = document.documentElement;
+		if (mq.matches) {
+			html.classList.add("dark");
+			html.classList.remove("light");
+			html.setAttribute("data-theme", "github-dark");
+		} else {
+			html.classList.remove("dark");
+			html.classList.add("light");
+			html.setAttribute("data-theme", "github-light");
+		}
+	});
+}
+
 onMount(() => {
-	if (!isRainbowMode) {
-		return;
+	if (isRainbowMode) {
+		document.documentElement.classList.add("is-rainbow-mode");
+		document.documentElement.style.setProperty(
+			"--rainbow-duration",
+			`${120 / rainbowSpeed}s`,
+		);
 	}
 
-	document.documentElement.classList.add("is-rainbow-mode");
-	document.documentElement.style.setProperty(
-		"--rainbow-duration",
-		`${120 / rainbowSpeed}s`,
-	);
+	watchSystemTheme();
 });
 </script>
 
 <div id="display-setting" class="float-panel float-panel-closed absolute z-[90] transition-all w-80 right-4 px-4 py-4">
 
+    <!-- 主题模式 -->
+    <div class="flex flex-row gap-2 mb-3 items-center justify-between">
+        <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
+            before:w-1 before:h-4 before:rounded-md before:bg-[var(--primary)]
+            before:absolute before:-left-3 before:top-[0.33rem]"
+        >
+            主题模式
+        </div>
+        <button
+            aria-label="切换主题模式"
+            class="btn-regular rounded-md h-7 px-3 flex items-center gap-1.5 text-sm font-medium active:scale-95"
+            onclick={() => (showThemeDropdown = !showThemeDropdown)}
+        >
+            <Icon icon={themeModeIcons[themeMode]} class="text-[0.95rem]" />
+            <span class="text-[var(--btn-content)]">{themeModeLabels[themeMode]}</span>
+            <Icon
+                icon="material-symbols:expand-more-rounded"
+                class="text-[1rem] text-[var(--btn-content)] transition-transform {showThemeDropdown ? 'rotate-180' : ''}"
+            />
+        </button>
+    </div>
+
+    {#if showThemeDropdown}
+    <div class="mb-3 p-1 rounded-[var(--radius-large)] bg-[var(--card-bg)] border border-white/10 overflow-hidden transition-all">
+        {#each [SYSTEM_MODE, DARK_MODE, LIGHT_MODE] as mode}
+            <button
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition text-left hover:bg-[var(--btn-plain-bg-hover)] active:bg-[var(--btn-plain-bg-active)] {themeMode === mode ? 'bg-[var(--btn-plain-bg-hover)]' : ''}"
+                onclick={() => applyTheme(mode)}
+            >
+                <Icon icon={themeModeIcons[mode]} class="text-[1.1rem] text-[var(--primary)] shrink-0" />
+                <div class="flex flex-col min-w-0">
+                    <span class="text-sm font-medium text-[var(--btn-content)]">{themeModeLabels[mode]}</span>
+                </div>
+                {#if themeMode === mode}
+                    <Icon icon="material-symbols:check" class="text-[1rem] text-[var(--primary)] ml-auto shrink-0" />
+                {/if}
+            </button>
+        {/each}
+    </div>
+    {/if}
 
     <div class="flex flex-row gap-2 mb-3 items-center justify-between">
         <div class="flex gap-2 font-bold text-lg text-neutral-100 transition relative ml-3
@@ -218,4 +323,3 @@ onMount(() => {
     </div>
     {/if}
 </div>
-

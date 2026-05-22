@@ -1,5 +1,5 @@
 import { expressiveCodeConfig } from "@/config";
-import { DARK_MODE } from "@constants/constants.ts";
+import { DARK_MODE, LIGHT_MODE, SYSTEM_MODE, type ThemeMode } from "@constants/constants";
 
 export function getDefaultHue(): number {
 	const fallback = "250";
@@ -86,15 +86,50 @@ export function setDevServer(server: string): void {
 	localStorage.setItem("dev-server", server);
 }
 
+// ===== 主题模式（system / dark / light）=====
+
+export function getThemeMode(): ThemeMode {
+	const stored = localStorage.getItem("theme-mode");
+	if (stored === DARK_MODE || stored === LIGHT_MODE || stored === SYSTEM_MODE) {
+		return stored;
+	}
+	return SYSTEM_MODE; // 默认跟随系统
+}
+
+export function setThemeMode(mode: ThemeMode): void {
+	localStorage.setItem("theme-mode", mode);
+}
+
+/** 根据当前主题模式，返回实际生效的是 dark 还是 light */
+export function resolveEffectiveTheme(): "dark" | "light" {
+	const mode = getThemeMode();
+	if (mode === DARK_MODE) return "dark";
+	if (mode === LIGHT_MODE) return "light";
+	// system: 跟随设备
+	if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
+		return "dark";
+	}
+	return "light";
+}
+
 export function applyThemeToDocument() {
-	document.documentElement.classList.add("dark");
-	document.documentElement.setAttribute(
-		"data-theme",
-		expressiveCodeConfig.theme,
-	);
+	const effective = resolveEffectiveTheme();
+	const html = document.documentElement;
+
+	if (effective === "dark") {
+		html.classList.add("dark");
+		html.classList.remove("light");
+		html.setAttribute("data-theme", expressiveCodeConfig.theme || "github-dark");
+	} else {
+		html.classList.remove("dark");
+		html.classList.add("light");
+		html.setAttribute(
+			"data-theme",
+			expressiveCodeConfig.lightTheme || "github-light",
+		);
+	}
 }
 
 export function setTheme(): void {
-	localStorage.setItem("theme", DARK_MODE);
 	applyThemeToDocument();
 }

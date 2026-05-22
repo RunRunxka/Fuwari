@@ -153,6 +153,7 @@ export const umamiConfig: UmamiConfig = {
 
 export const expressiveCodeConfig: ExpressiveCodeConfig = {
 	theme: "github-dark",
+	lightTheme: "github-light",
 };
 
 export const gitHubEditConfig: GitHubEditConfig = {

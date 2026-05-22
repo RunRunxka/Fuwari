@@ -84,3 +84,62 @@ define({
   --toc-width: clamp(11rem, calc((100vw - var(--page-width)) / 2 - 1rem), 22rem)
   --toc-item-active: oklch(0.35 0.07 var(--hue))
 })
+
+/* ===== 浅色主题 ===== */
+html.light
+  --primary: oklch(0.55 0.18 var(--hue))
+  --page-bg: oklch(0.96 0.004 var(--hue))
+  --card-bg: unquote("oklch(0.98 0.002 var(--hue) / 0.82)")
+  --card-bg-transparent: rgba(255, 255, 255, 0.82)
+
+  --btn-content: oklch(0.45 0.15 var(--hue))
+
+  --btn-regular-bg: oklch(0.92 0.01 var(--hue))
+  --btn-regular-bg-hover: oklch(0.88 0.015 var(--hue))
+  --btn-regular-bg-active: oklch(0.83 0.02 var(--hue))
+
+  --btn-plain-bg-hover: oklch(0.93 0.008 var(--hue))
+  --btn-plain-bg-active: oklch(0.89 0.014 var(--hue))
+
+  --btn-card-bg-hover: oklch(0.94 0.008 var(--hue))
+  --btn-card-bg-active: oklch(0.90 0.014 var(--hue))
+
+  --enter-btn-bg: var(--btn-regular-bg)
+  --enter-btn-bg-hover: var(--btn-regular-bg-hover)
+  --enter-btn-bg-active: var(--btn-regular-bg-active)
+
+  --deep-text: oklch(0.22 0.03 var(--hue))
+
+  --title-active: oklch(0.50 0.12 var(--hue))
+
+  --line-divider: black(0.10)
+  --line-color: black(0.12)
+  --meta-divider: black(0.25)
+
+  --inline-code-bg: var(--btn-regular-bg)
+  --inline-code-color: var(--btn-content)
+  --selection-bg: oklch(0.85 0.08 var(--hue))
+  --codeblock-selection: oklch(0.85 0.08 var(--hue))
+  --codeblock-bg: oklch(0.96 0.004 var(--hue))
+  --codeblock-topbar-bg: oklch(0.91 0.004 var(--hue))
+
+  --license-block-bg: oklch(0.95 0.008 var(--hue))
+
+  --link-underline: oklch(0.55 0.15 var(--hue))
+  --link-hover: oklch(0.55 0.15 var(--hue))
+  --link-active: oklch(0.48 0.13 var(--hue))
+
+  --float-panel-bg: unquote("oklch(0.98 0.001 var(--hue) / 0.93)")
+  --float-panel-bg-transparent: rgba(255, 255, 255, 0.88)
+  --float-panel-bg-opaque: unquote("oklch(0.98 0.001 var(--hue))")
+
+  --scrollbar-bg: black(0.18)
+  --scrollbar-bg-hover: black(0.28)
+  --scrollbar-bg-active: black(0.38)
+
+  --color-selection-bar: linear-gradient(to right, oklch(0.85 0.10 0), oklch(0.85 0.10 30), oklch(0.85 0.10 60), oklch(0.85 0.10 90), oklch(0.85 0.10 120), oklch(0.85 0.10 150), oklch(0.85 0.10 180), oklch(0.85 0.10 210), oklch(0.85 0.10 240), oklch(0.85 0.10 270), oklch(0.85 0.10 300), oklch(0.85 0.10 330), oklch(0.85 0.10 360))
+
+  --toc-badge-bg: var(--btn-regular-bg)
+  --toc-btn-hover: oklch(0.92 0.008 var(--hue))
+  --toc-btn-active: oklch(0.88 0.014 var(--hue))
+  --toc-item-active: oklch(0.55 0.13 var(--hue))

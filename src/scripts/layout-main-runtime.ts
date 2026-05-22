@@ -10,6 +10,7 @@ import {
 	getBgBlur,
 	getHideBg,
 	getHue,
+	resolveEffectiveTheme,
 	setBgBlur,
 	setHideBg,
 	setHue,
@@ -97,7 +98,8 @@ function loadGiscus() {
 		const val = container.getAttribute(attr);
 		if (val) script.setAttribute(attr, val);
 	});
-	script.setAttribute("data-theme", "dark");
+	const giscusTheme = resolveEffectiveTheme() === "dark" ? "dark" : "light";
+	script.setAttribute("data-theme", giscusTheme);
 	script.crossOrigin = "anonymous";
 	script.async = true;
 
@@ -114,8 +116,9 @@ function init() {
 	new MutationObserver(() => {
 		const frame = document.querySelector<HTMLIFrameElement>("iframe.giscus-frame");
 		if (!frame?.contentWindow) return;
+		const giscusTheme = resolveEffectiveTheme() === "dark" ? "dark" : "light";
 		frame.contentWindow.postMessage(
-			{ giscus: { setConfig: { theme: "dark" } } },
+			{ giscus: { setConfig: { theme: giscusTheme } } },
 			"https://giscus.app",
 		);
 	}).observe(document.documentElement, {

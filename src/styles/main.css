@@ -328,3 +328,80 @@ body {
     }
 }
 
+/* ===== 浅色主题覆盖 ===== */
+html.light .card-base {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+html.light .card-hover:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+}
+html.light .card-glass {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+html.light .card-interactive {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+html.light .card-interactive:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    background-color: rgba(0, 0, 0, 0.03);
+}
+html.light .card-interactive:active {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+html.light .card-shadow {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.03));
+}
+
+html.light .toc-panel {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+html.light .text-90 {
+    color: rgba(0, 0, 0, 0.85);
+}
+html.light .text-75 {
+    color: rgba(0, 0, 0, 0.70);
+}
+html.light .text-50 {
+    color: rgba(0, 0, 0, 0.50);
+}
+html.light .text-30 {
+    color: rgba(0, 0, 0, 0.35);
+}
+html.light .text-25 {
+    color: rgba(0, 0, 0, 0.25);
+}
+
+html.light .btn-plain {
+    color: rgba(0, 0, 0, 0.70);
+}
+html.light .btn-regular {
+    color: rgba(0, 0, 0, 0.70);
+}
+html.light .btn-regular-dark {
+    background-color: oklch(0.90 0.02 var(--hue));
+}
+html.light .btn-regular-dark:hover {
+    background-color: oklch(0.85 0.025 var(--hue));
+}
+html.light .btn-regular-dark:active {
+    background-color: oklch(0.80 0.03 var(--hue));
+}
+html.light .btn-card.disabled {
+    color: rgba(0, 0, 0, 0.10);
+}
+
+html.light .meta-icon {
+    color: var(--btn-content);
+}
+html.light .page-title-icon {
+    color: rgba(255, 255, 255, 0.90);
+}
+
+html.light .expressive-code .frame .code-expand-btn {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+html.light #navbar .card-base {
+    border-color: rgba(0, 0, 0, 0.08);
+}
