@@ -9,6 +9,7 @@ import type {
 	UmamiConfig,
 } from "./types/config";
 import { LinkPreset } from "./types/config";
+import touxiang from "./assets/images/touxiang.png";
 
 export const siteConfig: SiteConfig = {
 	
@@ -104,7 +105,7 @@ export const navBarConfig: NavBarConfig = {
 };
 
 export const profileConfig: ProfileConfig = {
-	avatar: '/touxiang.png', // Relative to the /src directory. Relative to the /public directory if it starts with '/'
+	avatar: touxiang,
 	name: "Run",
 	bio: "Protect What You Love.",
 	links: [
