@@ -97,7 +97,7 @@ export default defineConfig({
 image: {
                 service: passthroughImageService()
         },
-        site: "https://xiegao.top",
+        site: "http://8.137.196.229:5544",
 	base: "/",
 	trailingSlash: "ignore",
 	output: "static",
