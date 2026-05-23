@@ -91,7 +91,7 @@ export const navBarConfig: NavBarConfig = {
 		},
 		{
 			name: "统计",
-			url: "https://cloud.umami.is/share/JX2ugc1owxm4gidL",
+			url: "http://8.137.196.229:3000",
 			external: true,
 			icon: "material-symbols:table-chart",
 		},
