@@ -232,6 +232,20 @@ const setup = () => {
 
 		scrollFunction();
 		loadGiscus();
+
+		// 修复 Swup 过渡后 SVG 图标消失 & 计数器归零
+		requestAnimationFrame(() => {
+			// 强制 SVG <use> 重新渲染
+			document.querySelectorAll("svg use").forEach((use) => {
+				const href = use.getAttribute("href");
+				if (href) {
+					use.removeAttribute("href");
+					requestAnimationFrame(() => use.setAttribute("href", href));
+				}
+			});
+			// 触发计数器刷新（Profile 在 #swup-main 外面，但事件仍生效）
+			window.dispatchEvent(new CustomEvent("content:replace"));
+		});
 	});
 	window.swup.hooks.on("visit:end", () => {
 		requestAnimationFrame(() => {
