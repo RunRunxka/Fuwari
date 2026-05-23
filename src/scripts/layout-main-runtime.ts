@@ -221,6 +221,12 @@ const setup = () => {
 		const targetUrl = visit?.to?.url ?? window.location.href;
 		if (pathsEqual(targetUrl, url("/"))) {
 			bodyElement?.classList.add("lg:is-home");
+			// 回到首页时清空文章遗留的 TOC 目录
+			const toc = document.getElementById("toc");
+			if (toc) {
+				const el = toc.querySelector("table-of-contents");
+				if (el) el.remove();
+			}
 		} else {
 			bodyElement?.classList.remove("lg:is-home");
 		}
@@ -367,9 +373,17 @@ window.onresize = () => {
 	);
 };
 
-// 修复手机端返回手势（bfcache 恢复）后 SVG 图标消失
+// 修复手机端返回手势（bfcache 恢复）后 SVG 图标消失 & TOC 残留
 window.addEventListener("pageshow", (event) => {
 	if (event.persisted) {
+		// 回到首页时清空文章遗留的 TOC 目录
+		if (window.location.pathname === "/" || window.location.pathname === "") {
+			const toc = document.getElementById("toc");
+			if (toc) {
+				const el = toc.querySelector("table-of-contents");
+				if (el) el.remove();
+			}
+		}
 		requestAnimationFrame(() => {
 			// 强制所有 SVG 重新解析（克隆替换，根治跨元素 <use> 引用失效）
 			document.querySelectorAll("svg").forEach((svg) => {
