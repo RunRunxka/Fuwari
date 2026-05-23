@@ -91,7 +91,7 @@ export const navBarConfig: NavBarConfig = {
 		},
 		{
 			name: "统计",
-			url: "http://8.137.196.229:3000",
+			url: "http://8.137.196.229:3000/share/ZznBL7JvgUbAUEnW",
 			external: true,
 			icon: "material-symbols:table-chart",
 		},
@@ -147,7 +147,7 @@ export const imageFallbackConfig: ImageFallbackConfig = {
 export const umamiConfig: UmamiConfig = {
 	enable: true,
 	baseUrl: "http://8.137.196.229:3000",
-	shareId: "JX2ugc1owxm4gidL",
+	shareId: "ZznBL7JvgUbAUEnW",
 	timezone: "Asia/Shanghai",
 };
 
