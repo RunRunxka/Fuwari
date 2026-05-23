@@ -366,3 +366,19 @@ window.onresize = () => {
 		`${offset}px`,
 	);
 };
+
+// 修复手机端返回手势（bfcache 恢复）后 SVG 图标消失
+window.addEventListener("pageshow", (event) => {
+	if (event.persisted) {
+		requestAnimationFrame(() => {
+			document.querySelectorAll("svg use").forEach((use) => {
+				const href = use.getAttribute("href");
+				if (href) {
+					use.removeAttribute("href");
+					requestAnimationFrame(() => use.setAttribute("href", href));
+				}
+			});
+			window.dispatchEvent(new CustomEvent("content:replace"));
+		});
+	}
+});
