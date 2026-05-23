@@ -385,11 +385,12 @@ window.addEventListener("pageshow", (event) => {
 			}
 		}
 		requestAnimationFrame(() => {
-			// 强制所有 SVG 重新解析（克隆替换，根治跨元素 <use> 引用失效）
-			document.querySelectorAll("svg").forEach((svg) => {
-				if (svg.querySelector("use")) {
-					const clone = svg.cloneNode(true) as SVGElement;
-					svg.parentNode?.replaceChild(clone, svg);
+			// 强制 SVG <use> 重新解析：移除再恢复 href，避免克隆破坏引用链
+			document.querySelectorAll("svg use").forEach((use) => {
+				const href = use.getAttribute("href");
+				if (href) {
+					use.removeAttribute("href");
+					requestAnimationFrame(() => use.setAttribute("href", href));
 				}
 			});
 			window.dispatchEvent(new CustomEvent("content:replace"));
