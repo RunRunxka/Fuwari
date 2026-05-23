@@ -371,11 +371,11 @@ window.onresize = () => {
 window.addEventListener("pageshow", (event) => {
 	if (event.persisted) {
 		requestAnimationFrame(() => {
-			document.querySelectorAll("svg use").forEach((use) => {
-				const href = use.getAttribute("href");
-				if (href) {
-					use.removeAttribute("href");
-					requestAnimationFrame(() => use.setAttribute("href", href));
+			// 强制所有 SVG 重新解析（克隆替换，根治跨元素 <use> 引用失效）
+			document.querySelectorAll("svg").forEach((svg) => {
+				if (svg.querySelector("use")) {
+					const clone = svg.cloneNode(true) as SVGElement;
+					svg.parentNode?.replaceChild(clone, svg);
 				}
 			});
 			window.dispatchEvent(new CustomEvent("content:replace"));
