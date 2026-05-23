@@ -145,26 +145,28 @@ html.light .custom-md code span.line:before {
 
 /* ===== 浅色主题：覆盖 prose-invert（硬编码在 Markdown.astro 中） ===== */
 html.light .custom-md.prose-invert {
-    --tw-prose-body: #374151;
-    --tw-prose-headings: #111827;
-    --tw-prose-lead: #4b5563;
-    --tw-prose-links: #111827;
-    --tw-prose-bold: #111827;
-    --tw-prose-counters: #6b7280;
-    --tw-prose-bullets: #d1d5db;
-    --tw-prose-hr: #e5e7eb;
-    --tw-prose-quotes: #111827;
-    --tw-prose-quote-borders: #e5e7eb;
-    --tw-prose-captions: #6b7280;
-    --tw-prose-kbd: #111827;
-    --tw-prose-code: #111827;
-    --tw-prose-pre-code: #374151;
-    --tw-prose-pre-bg: #f3f4f6;
-    --tw-prose-th-borders: #d1d5db;
-    --tw-prose-td-borders: #e5e7eb;
+    --tw-prose-body: #374151 !important;
+    --tw-prose-headings: #111827 !important;
+    --tw-prose-lead: #4b5563 !important;
+    --tw-prose-links: #111827 !important;
+    --tw-prose-bold: #111827 !important;
+    --tw-prose-counters: #6b7280 !important;
+    --tw-prose-bullets: #d1d5db !important;
+    --tw-prose-hr: #e5e7eb !important;
+    --tw-prose-quotes: #111827 !important;
+    --tw-prose-quote-borders: #e5e7eb !important;
+    --tw-prose-captions: #6b7280 !important;
+    --tw-prose-kbd: #111827 !important;
+    --tw-prose-code: #111827 !important;
+    --tw-prose-pre-code: #374151 !important;
+    --tw-prose-pre-bg: #f3f4f6 !important;
+    --tw-prose-th-borders: #d1d5db !important;
+    --tw-prose-td-borders: #e5e7eb !important;
 }
 
-/* ===== 浅色主题：代码块背景（expressive-code 二级框） ===== */
-html.light .custom-md .expressive-code pre {
+/* ===== 浅色主题：代码块背景 ===== */
+html.light .custom-md .expressive-code,
+html.light .custom-md .expressive-code pre,
+html.light .custom-md .expressive-code .frame {
     background: var(--codeblock-bg) !important;
 }
