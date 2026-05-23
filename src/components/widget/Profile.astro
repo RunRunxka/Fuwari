@@ -79,7 +79,7 @@ for (const post of posts) {
     }
 </style>
 
-<script>
+<script define:vars={{ umamiConfig }}>
     // 保留你的专属动画特效
     function animateValue(obj, start, end, duration) {
         let startTimestamp = null;
@@ -96,20 +96,34 @@ for (const post of posts) {
         window.requestAnimationFrame(step);
     }
 
-    // 使用自建计数器 API
+    // 使用 Umami 分享 API 获取访问量
     let countIncremented = false;
     async function loadSiteStats() {
         try {
-            // 首次访问时递增计数
-            const apiPath = countIncremented ? '/api/counter' : '/api/counter/increment';
-            const res = await fetch(apiPath);
+            const tokenRes = await fetch(`${umamiConfig.baseUrl}/api/share/${umamiConfig.shareId}`);
+            if (!tokenRes.ok) return;
+            const tokenData = await tokenRes.json();
+            const token = tokenData.token;
+
+            const statsUrl = `${umamiConfig.baseUrl}/api/websites/${umamiConfig.websiteId}/stats?startAt=0&endAt=${Date.now()}`;
+            const res = await fetch(statsUrl, {
+                headers: {
+                    'x-umami-share-token': token,
+                    'x-umami-share-context': '1'
+                }
+            });
             if (!res.ok) return;
             const data = await res.json();
-            countIncremented = true;
 
             const el = document.getElementById('site-views');
-            if (el && data.pageviews !== undefined) {
-                animateValue(el, 0, data.pageviews, 800);
+            if (el) {
+                let views = 0;
+                if (data.pageviews && typeof data.pageviews === 'object' && data.pageviews.value !== undefined) {
+                    views = data.pageviews.value;
+                } else if (data.pageviews !== undefined) {
+                    views = data.pageviews;
+                }
+                animateValue(el, 0, views, 800);
             }
         } catch (e) { 
             console.warn("Site Stats Error", e);

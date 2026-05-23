@@ -67,7 +67,7 @@ const className = Astro.props.class;
 </div>
 
 {slug && (
-    <script define:vars={{ slug }}>
+    <script define:vars={{ slug, umamiConfig }}>
     function animateValue(obj, start, end, duration, suffix = "") {
         let startTimestamp = null;
         const step = (timestamp) => {
@@ -85,16 +85,33 @@ const className = Astro.props.class;
 
     async function fetchPageViews() {
         try {
-            const res = await fetch('/api/counter');
-            if (!res.ok) return;
-            const data = await res.json();
+            const tokenRes = await fetch(`${umamiConfig.baseUrl}/api/share/${umamiConfig.shareId}`);
+            if (!tokenRes.ok) return;
+            const tokenData = await tokenRes.json();
+            const token = tokenData.token;
+
+            const statsUrl = `${umamiConfig.baseUrl}/api/websites/${umamiConfig.websiteId}/stats?path=/posts/${slug}/&startAt=0&endAt=${Date.now()}`;
+            const response = await fetch(statsUrl, {
+                headers: {
+                    'x-umami-share-token': token,
+                    'x-umami-share-context': '1'
+                }
+            });
+            if (!response.ok) return;
+            const data = await response.json();
 
             const viewsElement = document.getElementById(`page-views-${slug}`);
-            if (viewsElement && data.pageviews !== undefined) {
-                animateValue(viewsElement, 0, data.pageviews, 800, " 次");
+            if (viewsElement) {
+                let views = 0;
+                if (typeof data.pageviews === 'number') {
+                    views = data.pageviews;
+                } else if (data.pageviews && data.pageviews.value) {
+                    views = data.pageviews.value;
+                }
+                animateValue(viewsElement, 0, views, 800, " 次");
             }
         } catch (error) {
-            console.warn('PV fetch failed.', error);
+            console.warn('Umami PV fetch failed.', error);
         }
     }
 

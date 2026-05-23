@@ -148,6 +148,7 @@ export const umamiConfig: UmamiConfig = {
 	enable: true,
 	baseUrl: "http://8.137.196.229:3000",
 	shareId: "ZznBL7JvgUbAUEnW",
+	websiteId: "db45af07-07c2-407b-b816-b6227ff1e3b4",
 	timezone: "Asia/Shanghai",
 };
 
