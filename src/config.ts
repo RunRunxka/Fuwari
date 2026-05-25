@@ -59,8 +59,8 @@ export const siteConfig: SiteConfig = {
 		},
 	],
 	officialSites: [
-		{ url: "http://8.137.196.229:5544", alias: "CN" },
-		{ url: "http://8.137.196.229:5544", alias: "Global" },
+		{ url: "http://8.137.196.229", alias: "CN" },
+\t\t{ url: "http://8.137.196.229", alias: "Global" },
 	],
 	server: [
 		{ url: "", text: "Blog" },

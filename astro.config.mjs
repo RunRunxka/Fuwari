@@ -97,7 +97,7 @@ export default defineConfig({
 image: {
                 service: passthroughImageService()
         },
-        site: "http://8.137.196.229:5544",
+        site: "http://8.137.196.229",
 	base: "/",
 	trailingSlash: "ignore",
 	output: "static",
