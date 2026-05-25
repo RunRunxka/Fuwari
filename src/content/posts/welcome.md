@@ -5,6 +5,7 @@ description: 我是 Run，一名热爱折腾、保持好奇的学生开发者。
 tags: [关于]
 category: 关于
 draft: false
+pinned: true
 ---
 
 ## 我是 Run
