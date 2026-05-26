@@ -1383,8 +1383,21 @@ function downloadLink(url: string, filename: string) {
     label, span, p, h4 {
         color: #e5e7eb; /* gray-200 */
     }
+    :global(html.light) label,
+    :global(html.light) span,
+    :global(html.light) p,
+    :global(html.light) h4 {
+        color: rgb(50, 50, 50);
+    }
     .text-gray-500 {
         color: #9ca3af !important; /* gray-400 */
+    }
+    :global(html.light) .text-gray-500 {
+        color: rgb(107, 114, 128) !important;
+    }
+    :global(html.light) .input-field {
+        color: rgb(23, 23, 23);
+        border-color: rgb(180, 180, 180);
     }
     .icon-svg-box {
         width: 100%;
