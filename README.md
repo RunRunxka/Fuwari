@@ -98,7 +98,7 @@ Windows 本地 (pnpm) 或 Hermes Agent (服务器)
    Python ThreadingHTTPServer :80
         │
         ▼
-   http://8.137.196.229
+   你的域名或 IP
 ```
 
 配套服务（同服务器）：

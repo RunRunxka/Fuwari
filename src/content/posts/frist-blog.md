@@ -17,9 +17,9 @@ draft: false
 |---|---|
 | 博客框架 | [Fuwari](https://github.com/saicaca/fuwari) (Astro) |
 | 代码托管 | GitHub (`RunRunxka/Fuwari`) |
-| 服务器 | 阿里云 ECS，Alibaba Linux 8，IP `8.137.196.229` |
+| 服务器 | 阿里云 ECS，Alibaba Linux 8，IP `x.x.x.x` |
 | 部署方式 | GitHub Actions 构建 → rsync 推送 → Python HTTP Server |
-| 访问地址 | `http://8.137.196.229:5544` |
+| 访问地址 | `http://x.x.x.x:5544` |
 
 ## 第一步：服务器端准备
 
@@ -88,7 +88,7 @@ jobs:
 | Name | Value |
 |---|---|
 | `SSH_PRIVATE_KEY` | `~/.ssh/github_actions` 私钥内容 |
-| `REMOTE_HOST` | `8.137.196.229` |
+| `REMOTE_HOST` | `x.x.x.x` |
 | `REMOTE_USER` | `admin` |
 
 ## 第三步：启动静态文件服务
@@ -175,8 +175,8 @@ draft: false
 
 | 主机记录 | 记录类型 | 记录值 |
 |---|---|---|
-| `@` | A | `8.137.196.229` |
-| `www` | A | `8.137.196.229` |
+| `@` | A | `x.x.x.x` |
+| `www` | A | `x.x.x.x` |
 
 但国内服务器用域名需要 ICP 备案，否则访问被拦截提示 `Non-compliance ICP Filing`。暂时用 IP:端口方式访问。
 
@@ -250,7 +250,7 @@ jobs:
 <p>| Name | Value |
 |---|---|
 | <code>SSH_PRIVATE_KEY</code> | <code>~/.ssh/github_actions</code> 私钥内容 |
-| <code>REMOTE_HOST</code> | <code>8.137.196.229</code> |
+| <code>REMOTE_HOST</code> | <code>x.x.x.x</code> |
 | <code>REMOTE_USER</code> | <code>admin</code> |</p>
 <h2>第三步：启动静态文件服务</h2>
 <p>构建好的文件在 <code>/home/admin/blog/</code>，用 Python 起个 HTTP 服务：</p>
@@ -312,8 +312,8 @@ draft: false
 <p>买了域名 <code>runrunxka.xyz</code>，去阿里云云解析加两条 A 记录：</p>
 <p>| 主机记录 | 记录类型 | 记录值 |
 |---|---|---|
-| <code>@</code> | A | <code>8.137.196.229</code> |
-| <code>www</code> | A | <code>8.137.196.229</code> |</p>
+| <code>@</code> | A | <code>x.x.x.x</code> |
+| <code>www</code> | A | <code>x.x.x.x</code> |</p>
 <p>但国内服务器用域名需要 ICP 备案，否则访问被拦截提示 <code>Non-compliance ICP Filing</code>。暂时用 IP:端口方式访问。</p>
 <h2>总结</h2>
 <p>现在每次写完文章或改配置，只需要：</p>
