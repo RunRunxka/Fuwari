@@ -1,220 +1,163 @@
-# Fuwari For XieGao
+# RunRunxka's Blog
 
-### 有问题?尝试[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/XuexGao/Fuweri)
+> 基于 [Fuwari](https://github.com/saicaca/fuwari) 深度定制的个人博客，由 [Hermes Agent](https://github.com/NousResearch/hermes-agent) 代理运维。
 
-> [!CAUTION]
-> 该仓库由 XieGao 深度定制，并包含了最新的文章，如果你想以此为模板进行二改，需要一定的动手能力。
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/55c2c63b-0dac-436e-aaa0-451ad2dfb65a" width="800" alt="site preview" />
+</p>
 
-<img width="1858" height="948" alt="image" src="https://github.com/user-attachments/assets/55c2c63b-0dac-436e-aaa0-451ad2dfb65a" />
+## 🔥 与原版 Fuwari 的区别
 
-一个基于 Astro 构建的现代化个人博客主题，专注于技术分享与实践。
+| 方面 | 原版 Fuwari | 本仓库 |
+|------|-----------|--------|
+| 🎨 主题色 | 紫色 (hue: 250) | 红色 (hue: 0) |
+| 🌓 主题模式 | 仅暗色 | **暗色 / 日间 / 跟随系统** 三模式 |
+| 📊 统计 | Umami Cloud | **自部署 Umami**（PostgreSQL，同服） |
+| 🚀 部署 | Vercel / Cloudflare | **阿里云 ECS**（GitHub Actions → rsync） |
+| 🤖 运维 | 手动 | **Hermes Agent 全自动**（发文、排障、监控） |
+| 📂 云盘 | 无 | **集成 OpenList 文件管理器** |
+| 💬 评论 | 无 | **Giscus**（GitHub Discussions） |
+| 🖼️ 工具 | 无 | **封面生成器** / AI 参与度卡片 |
+| 🔧 样式 | 50+ 处未适配浅色 | **全面浅色主题覆盖** + 组件级修复 |
 
 ## ✨ 特性
 
-- 🚀 基于 Astro 5.0+ 构建，性能卓越
-- 📱 完全响应式设计，支持移动端
-- 🌈 支持深色/浅色/自动主题切换 + 可自定义主题色彩
-- 🎨 彩虹模式，让页面更加缤纷
-- 📝 支持 Markdown 和 MDX 格式
-- 🔍 内置搜索功能
-- 📊 文章阅读时间统计
-- 🏷️ 标签和分类系统
-- 📈 SEO 优化
-- 💬 评论系统支持（Giscus）
-- 📡 RSS 订阅支持
-- 🎯 文章更新提醒
-- 🖼️ 内置画廊与封面生成器
+- 🚀 Astro 5.0+ 构建，Lighthouse 满分
+- 🌓 暗色 / 日间 / 跟随系统主题切换 + 可自定义色相
+- 🌈 彩虹模式
+- 📝 Markdown 写作，支持 frontmatter 元数据
+- 🔍 全文搜索
+- 📊 文章阅读时间 + 自部署 Umami 访问统计
+- 🏷️ 标签 / 分类 / 置顶
+- 💬 Giscus 评论系统
+- 📡 RSS / Sitemap / SEO 优化
+- 🖼️ 封面生成器（图标 + 文字 + 背景图片）
+- 🤖 AI 参与度标记
+- 📂 导航集成 OpenList 云盘
 
 ## 🛠️ 技术栈
 
-- **框架**: Astro 5.x
-- **样式**: Tailwind CSS + Stylus
-- **交互**: Svelte 5
-- **构建工具**: Vite
-- **包管理**: pnpm
-- **代码规范**: Biome
+| 层 | 技术 |
+|----|------|
+| 框架 | Astro 5.x |
+| 样式 | Tailwind CSS + Stylus |
+| 交互 | Svelte (传统语法) |
+| 评论 | Giscus |
+| 统计 | Umami v3.1.0 (自部署) |
+| 部署 | GitHub Actions → rsync → 阿里云 ECS |
+| 运维 | Hermes Agent |
 
 ## 🚀 快速开始
 
-### 环境要求
-
-- Node.js 18+
-- pnpm 9.x
-
-### 安装依赖
-
 ```bash
+# 安装依赖
 pnpm install
-```
 
-### 开发模式
-
-```bash
+# 本地开发
 pnpm dev
-```
 
-### 构建生产版本
-
-```bash
+# 构建
 pnpm build
 ```
 
-### 预览构建结果
+## 📝 发布文章
+
+本仓库由 Hermes Agent 代理运维，发文流程：
+
+1. 将 `.md` 文件和图片放到 OpenList 的 `shared/` 目录
+2. 告诉 Hermes："帮我发布这篇文章"
+3. Hermes 自动完成：格式化 → 提交 → 推送 → CI 构建 → 部署上线
+
+也可以手动：
 
 ```bash
-pnpm preview
+# 创建文章
+pnpm new-post my-post
+
+# 提交推送
+git add src/content/posts/my-post.md
+git commit -m "posts:发布新文章《我的文章》。"
+git push origin main
 ```
 
-## 📝 使用指南
+推送后 GitHub Actions 自动构建并 rsync 到服务器，约 1 分钟后生效。
 
-### 创建新文章
+## 🏗️ 部署架构
 
-使用内置脚本快速创建新文章：
-
-```bash
-pnpm new-post helloword
+```
+Windows 本地 (pnpm) 或 Hermes Agent (服务器)
+        │
+        │ git push
+        ▼
+   GitHub Actions
+   (pnpm build)
+        │
+        │ rsync
+        ▼
+   阿里云 ECS (/home/admin/blog/)
+   Python ThreadingHTTPServer :80
+        │
+        ▼
+   http://8.137.196.229
 ```
 
-### 清理未使用的图片
-
-清理 `src/content/assets` 目录下未被引用的图片文件：
-
-```bash
-pnpm clean
-```
-
-### 规范化图片文件名
-
-扫描 Markdown 文件中的图片引用，将文件名中的空格、逗号、多余的点等特殊字符移除，并同步更新文件引用。这有助于提高多构建平台的兼容性（某些平台不支持特殊字符文件名）。
-
-```bash
-pnpm del-space
-```
-
-### 修复相邻图片空行
-
-扫描 `src/content/**/*.md`，当两张图片紧挨着（连续两行 `![](...)`）时，在中间插入一个空行，避免渲染与 diff 匹配受相邻图片影响。
-
-```bash
-pnpm imgf
-```
-
-仅检测不写入：
-
-```bash
-pnpm imgf --check
-```
-
-### 配置博客
-
-编辑 `src/config.ts` 文件来自定义博客配置：
-
-```typescript
-export const siteConfig: SiteConfig = {
-  title: "Fuwari",
-  subtitle: "技术分享与实践",
-  lang: "zh_CN",
-  themeColor: {
-    hue: 250,
-    fixed: false,
-  },
-  banner: {
-    enable: false,
-    src: "assets/images/demo-banner.png",
-    position: "center",
-  },
-  favicon: [
-    {
-      src: "/favicon/icon.png",
-    }
-  ]
-}
-```
-
-### 文章格式
-
-文章使用 Markdown 格式，支持 frontmatter：
-
-```markdown
----
-title: 文章标题
-published: 2024-01-01
-description: 文章描述
-image: ./cover.jpg
-tags: [标签1, 标签2]
-category: 分类
-draft: false
----
-
-# 文章内容
-
-这里是文章正文...
-```
+配套服务（同服务器）：
+- 📊 **Umami 统计** → `:3000`（PostgreSQL）
+- 📂 **OpenList 云盘** → `:5244`
 
 ## 📁 项目结构
 
 ```
-├── public/                 # 静态资源
 ├── src/
-│   ├── components/         # 组件
-│   ├── content/           # 内容
-│   │   ├── posts/         # 博客文章
-│   │   └── assets/        # 资源文件
+│   ├── components/       # Svelte + Astro 组件
+│   │   ├── CoverGenerator.svelte   # 封面生成器
+│   │   ├── Search.svelte           # 全文搜索
+│   │   └── widget/                 # 小部件（设置、通知等）
+│   ├── content/
+│   │   ├── posts/         # 博客文章 (.md)
+│   │   └── assets/        # 文章图片
 │   ├── layouts/           # 布局
-│   ├── pages/             # 页面
-│   ├── styles/            # 样式
-│   ├── plugins/           # 自定义插件
-│   ├── scripts/           # 脚本工具
-│   └── config.ts          # 配置文件
-├── scripts/               # 构建脚本
-└── package.json
+│   ├── pages/             # 路由页面
+│   ├── styles/            # CSS / Stylus
+│   │   ├── main.css       # 全局样式 + 浅色主题覆盖
+│   │   ├── markdown.css   # 文章渲染样式
+│   │   └── variables.styl # CSS 变量（暗色/浅色双套）
+│   ├── plugins/           # Remark / Rehype 插件
+│   ├── scripts/           # 辅助脚本
+│   └── config.ts          # 站点配置
+├── .github/workflows/     # CI 部署流水线
+└── scripts/               # 构建与维护脚本
 ```
 
-## 🎨 自定义
+## 🎨 自定义开发
 
-### 主题颜色
+### 主题色
 
-在 `src/config.ts` 中修改 `themeColor` 配置：
+`src/config.ts` → `themeColor.hue`，当前值 `0`（红色）。
 
-```typescript
-themeColor: {
-  hue: 250,        // 主色调 (0-360)
-  fixed: false,    // 是否固定颜色
-}
+### 浅色主题适配
+
+在 `src/styles/main.css` 末尾添加 `html.light` 前缀的覆盖规则。所有 Tailwind 颜色类（`text-white/*`、`text-gray-*` 等）都需要对应覆盖，**必须加 `!important`**。
+
+### 新增组件检查清单
+
+```bash
+# 搜索组件中使用的 Tailwind 颜色类
+grep -rn 'text-white\|text-gray\|text-neutral' src/components/
+
+# 如果有新的透明度级别，在 main.css 补充 html.light 覆盖
 ```
 
-### 彩虹模式
+## ⚠️ 常见坑
 
-网站支持彩虹模式，可让页面更加缤纷！在设置面板中开启"彩虹模式"即可体验。
+- **Svelte 组件**：使用 `onclick` 而非 `on:click`
+- **CSS 覆盖**：不加 `!important` 会被 Tailwind 级联覆盖
+- **Patch 工具**：`\t` 会被写成字面量，必须用真实 tab
+- **服务器 Python**：博客服务必须用 Python 3.11（系统 Python 3.6 不支持 `--directory` 且会挂死）
+- **构建失败排查**：Actions 日志不可见时，回退到成功提交 → 逐个文件增量推送
 
-### 样式定制
+## 📄 致谢
 
-- 全局样式：`src/styles/main.css`
-- Markdown 样式：`src/styles/markdown.css`
-- 变量定义：`src/styles/variables.styl`
-
-## 📦 部署
-
-构建后的静态文件位于 `dist/` 目录，可部署到任何静态托管平台。
-
-推荐平台：
-- Vercel
-- Cloudflare Pages
-- Netlify
-- EdgeOne Pages
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！详情请阅读 [贡献指南](CONTRIBUTING.md)。
-
-## 📄 许可证
-
-[MIT License](LICENSE)
-
-## 🙏 致谢
-
-感谢所有为这个项目做出贡献的开发者们！尤其感谢[上游仓库](https://github.com/saicaca/fuwari)
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=afoim/fuwari&type=date&legend=top-left)](https://www.star-history.com/#afoim/fuwari&type=date&legend=top-left)
+- [Fuwari](https://github.com/saicaca/fuwari) — 原始博客主题
+- [Hermes Agent](https://github.com/NousResearch/hermes-agent) — AI 代理运维
+- 所有为此项目做出贡献的开发者
