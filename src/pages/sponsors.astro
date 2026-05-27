@@ -97,7 +97,7 @@ const breadcrumbSchema = {
         <!-- 其他支持方式 -->
         <div class="card-base p-6 mb-6">
             <h2 class="text-xl font-bold text-white mb-3">其他支持方式</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" data-animate-stagger>
                 <div class="support-card">
                     <div class="flex items-center gap-2 mb-2">
                         <Icon name="material-symbols:share" class="text-[1.2rem] text-[var(--primary)]" />
@@ -137,7 +137,7 @@ const breadcrumbSchema = {
             <div class="mb-4">
                 <LinkSubmitInfo dataType="sponsors"></LinkSubmitInfo>
             </div>
-            <div class="sponsors-grid">
+            <div class="sponsors-grid" data-animate-stagger>
                 {sponsors.map((sponsor) => (
                     <div class="sponsor-card">
                         <div class="flex items-center gap-3 p-4 rounded-lg bg-[var(--card-bg)] border border-white/10 backdrop-blur-md">

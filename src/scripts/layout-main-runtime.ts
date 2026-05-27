@@ -1,4 +1,7 @@
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { siteConfig } from "../config";
+gsap.registerPlugin(ScrollTrigger);
 import {
 	BANNER_HEIGHT,
 	BANNER_HEIGHT_EXTEND,
@@ -67,7 +70,34 @@ function showBanner() {
 		return;
 	}
 
-	banner.classList.remove("opacity-0", "scale-105");
+	const img = banner.querySelector("img");
+	if (!img) {
+		banner.classList.remove("opacity-0", "scale-105");
+		return;
+	}
+
+	// Ken Burns: fade in + subtle continuous zoom
+	gsap.set(img, { scale: 1.08, willChange: "transform" });
+	gsap.set(banner, { opacity: 0 });
+	gsap.to(banner, { opacity: 1, duration: 1.2, ease: "power1.out" });
+	gsap.to(img, {
+		scale: 1.0,
+		duration: 6,
+		ease: "none",
+		repeat: -1,
+		yoyo: true,
+	});
+
+	// Parallax: scroll down zooms banner out
+	gsap.to(img, {
+		scale: 1.12,
+		scrollTrigger: {
+			trigger: banner,
+			start: "top top",
+			end: "bottom top",
+			scrub: 0.5,
+		},
+	});
 }
 
 function loadGiscus() {

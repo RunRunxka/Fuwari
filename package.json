@@ -48,6 +48,7 @@
 		"astro-icon": "^1.1.5",
 		"diff": "^8.0.3",
 		"dotenv": "^17.3.1",
+		"gsap": "^3.13.0",
 		"imagesloaded": "^5.0.0",
 		"katex": "^0.16.22",
 		"masonry-layout": "^4.2.2",

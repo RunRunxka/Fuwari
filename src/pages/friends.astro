@@ -46,7 +46,7 @@ const breadcrumbSchema = {
             <div class="mb-4">
                 <LinkSubmitInfo dataType="friends"></LinkSubmitInfo>
             </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" data-animate-stagger>
             {friends.map((friend) => (
                 <a href={friend.url} target="_blank" class="friend-card">
                     <div class="flex items-center gap-2">
