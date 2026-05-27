@@ -91,6 +91,9 @@ importers:
       imagesloaded:
         specifier: ^5.0.0
         version: 5.0.0
+      gsap:
+        specifier: ^3.13.0
+        version: 3.15.0
       katex:
         specifier: ^0.16.22
         version: 0.16.22
@@ -3357,6 +3360,9 @@ packages:
 
   imagesloaded@5.0.0:
     resolution: {integrity: sha512-/0JGSubc1MTCoDKVmonLHgbifBWHdyLkun+R/151E1c5n79hiSxcd7cB7mPXFgojYu8xnRZv7GYxzKoxW8BetQ==}
+
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   immutable@4.3.7:
     resolution: {integrity: sha512-1hqclzwYwjRDFLjcFxOM5AYkkG0rpFPpr1RLPMEuGczoS7YA8gLhy8SWXYRAA/XwfEHpfo3cw5JGioS32fnMRw==}
@@ -9562,6 +9568,8 @@ snapshots:
   imagesloaded@5.0.0:
     dependencies:
       ev-emitter: 2.1.2
+
+  gsap@3.15.0: {}
 
   immutable@4.3.7:
     optional: true
