@@ -343,9 +343,9 @@ import { Icon } from "astro-icon/components";
 
         // Logic for "No updates"
         if (newPosts.length === 0) {
-             list.innerHTML = `<div class="text-center text-gray-400 py-4">
+             list.innerHTML = `<div class="text-center text-white/60 py-4">
                 <p class="text-sm font-medium mb-2">暂无文章更新</p>
-                <div class="text-xs opacity-70 bg-gray-800 rounded px-2 py-1 inline-block">
+                <div class="text-xs bg-white/10 rounded px-2 py-1 inline-block text-white/70">
                     ${initTimeStr} - ${checkTimeStr}
                 </div>
              </div>`;
@@ -358,9 +358,9 @@ import { Icon } from "astro-icon/components";
         
         // Show timestamp header
         let html = `
-            <div class="text-xs text-gray-400 mb-2 px-1 flex flex-col gap-0.5">
-                <div class="font-medium">发现更新</div>
-                <div class="opacity-70 text-[10px]">${initTimeStr} - ${checkTimeStr}</div>
+            <div class="text-xs text-white/60 mb-2 px-1 flex flex-col gap-0.5">
+                <div class="font-medium text-white/80">发现更新</div>
+                <div class="text-white/50 text-[10px]">${initTimeStr} - ${checkTimeStr}</div>
             </div>`;
         
         newPosts.forEach(post => {
