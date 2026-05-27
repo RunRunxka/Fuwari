@@ -271,17 +271,17 @@ const setup = () => {
 
 		// 修复 Swup 过渡后 SVG 图标消失 & 计数器归零
 		requestAnimationFrame(() => {
-			// 强制 SVG <use> 重新渲染
-			document.querySelectorAll("svg use").forEach((use) => {
-				const href = use.getAttribute("href");
-				if (href) {
-					use.removeAttribute("href");
-					requestAnimationFrame(() => use.setAttribute("href", href));
-				}
-			});
-			// 触发计数器刷新（Profile 在 #swup-main 外面，但事件仍生效）
-			window.dispatchEvent(new CustomEvent("content:replace"));
-		});
+				requestAnimationFrame(() => {
+				document.querySelectorAll("svg use").forEach((use) => {
+					const href = use.getAttribute("href");
+					if (href) {
+						use.removeAttribute("href");
+						use.setAttribute("href", href);
+					}
+				});
+				window.dispatchEvent(new CustomEvent("content:replace"));
+				});
+			})
 	});
 	window.swup.hooks.on("visit:end", () => {
 		requestAnimationFrame(() => {
@@ -414,16 +414,18 @@ window.addEventListener("pageshow", (event) => {
 				if (el) el.remove();
 			}
 		}
+		// 双层 rAF 确保 astro-icon 的 SVG <use> 已渲染完成
 		requestAnimationFrame(() => {
-			// 强制 SVG <use> 重新解析：移除再恢复 href，避免克隆破坏引用链
-			document.querySelectorAll("svg use").forEach((use) => {
-				const href = use.getAttribute("href");
-				if (href) {
-					use.removeAttribute("href");
-					requestAnimationFrame(() => use.setAttribute("href", href));
-				}
+			requestAnimationFrame(() => {
+				document.querySelectorAll("svg use").forEach((use) => {
+					const href = use.getAttribute("href");
+					if (href) {
+						use.removeAttribute("href");
+						use.setAttribute("href", href);
+					}
+				});
+				window.dispatchEvent(new CustomEvent("content:replace"));
 			});
-			window.dispatchEvent(new CustomEvent("content:replace"));
 		});
 	}
 });
