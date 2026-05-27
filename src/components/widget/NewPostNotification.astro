@@ -60,9 +60,6 @@ import { Icon } from "astro-icon/components";
                 <div class="flex items-center gap-2 text-[var(--primary)]">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
                     <h3 class="font-bold text-white">发现新文章</h3>
-                    <a href="/posts/post-diff-guide/#食用方法" class="ml-1 text-xs text-[var(--primary)] hover:underline opacity-80" title="查看食用方法">
-                        <Icon name="material-symbols:help-outline-rounded" size={16} />
-                    </a>
                 </div>
                 <div class="flex items-center gap-1">
                     <button id="clear-notification" class="text-white/50 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-500/10" title="清空通知">
@@ -321,7 +318,7 @@ import { Icon } from "astro-icon/components";
     }
 
     // Helper to show notification
-    function showNotification(newPosts, timestamp, isFresh, initTime) {
+    function showNotification(newPosts, timestamp, isFresh, lastPostTime) {
         const minimizedBtn = document.getElementById('notification-minimized');
         const panel = document.getElementById('notification-panel');
         const list = document.getElementById(LIST_ID);
@@ -338,7 +335,9 @@ import { Icon } from "astro-icon/components";
             dot?.classList.remove('translate-y-20', 'opacity-0');
         });
 
-        const initTimeStr = new Date(initTime).toLocaleString();
+        const lastPostTimeStr = lastPostTime > 0
+            ? new Date(lastPostTime).toLocaleString()
+            : '';
 
         // 取最新文章的发布时间（有文章时），否则用当前时间
         const latestPubDate = newPosts.length > 0
@@ -351,7 +350,7 @@ import { Icon } from "astro-icon/components";
              list.innerHTML = `<div class="text-center text-white/60 py-4">
                 <p class="text-sm font-medium mb-2">暂无文章更新</p>
                 <div class="text-xs bg-white/10 rounded px-2 py-1 inline-block text-white/70">
-                    ${initTimeStr} - ${updateTimeStr}
+                    ${lastPostTimeStr} - ${updateTimeStr}
                 </div>
              </div>`;
              dot?.classList.add('scale-0');
@@ -365,7 +364,7 @@ import { Icon } from "astro-icon/components";
         let html = `
             <div class="text-xs text-white/60 mb-2 px-1 flex flex-col gap-0.5">
                 <div class="font-medium text-white/80">发现更新</div>
-                <div class="text-white/50 text-[10px]">${initTimeStr} - ${updateTimeStr}</div>
+                <div class="text-white/50 text-[10px]">${lastPostTimeStr} - ${updateTimeStr}</div>
             </div>`;
         
         newPosts.forEach(post => {
@@ -581,6 +580,9 @@ import { Icon } from "astro-icon/components";
         const currentPosts = await fetchRSS();
         if (currentPosts.length === 0) return;
 
+        // 提取 RSS 中最新文章发布时间
+        const latestPubDate = Math.max(...currentPosts.map(p => p.pubDate || 0));
+
         const db = await openDB();
         const storedPostsOld = await getStoredPosts(db, STORE_OLD);
         const storedPostsNew = await getStoredPosts(db, STORE_NEW);
@@ -611,7 +613,7 @@ import { Icon } from "astro-icon/components";
             await clearStore(db, STORE_NEW);
             localStorage.removeItem(LOCAL_STORAGE_KEY);
             // Treat as first visit (no updates)
-            showNotification([], Date.now(), false, initTime); 
+            showNotification([], Date.now(), false, latestPubDate); 
             return;
         }
 
@@ -622,7 +624,7 @@ import { Icon } from "astro-icon/components";
             await clearStore(db, STORE_NEW);
             // Clear any stale notification state
             localStorage.removeItem(NOTIFICATION_STATE_KEY);
-            showNotification([], Date.now(), false, initTime);
+            showNotification([], Date.now(), false, latestPubDate);
         } else {
             await clearStore(db, STORE_NEW);
             await savePosts(db, STORE_NEW, currentPosts);
@@ -709,7 +711,7 @@ import { Icon } from "astro-icon/components";
                     await clearStore(db, STORE_NEW);
                     // Clear state
                     localStorage.removeItem(NOTIFICATION_STATE_KEY);
-                    showNotification([], Date.now(), false, initTime);
+                    showNotification([], Date.now(), false, latestPubDate);
                     return;
                 }
 
@@ -723,7 +725,7 @@ import { Icon } from "astro-icon/components";
                 localStorage.setItem(NOTIFICATION_STATE_KEY, JSON.stringify(state));
                 
                 // Show with Red Dot + Auto Open
-                showNotification(detectedChanges, timestamp, true, initTime);
+                showNotification(detectedChanges, timestamp, true, latestPubDate);
             } else {
                 // CASE 2: No new updates
                 // Check if we have a persisted notification state
@@ -732,14 +734,14 @@ import { Icon } from "astro-icon/components";
                     try {
                         const state = JSON.parse(persistedStateStr);
                         // Show persisted items, NO Red Dot, NO Auto Open
-                        showNotification(state.items, state.timestamp, false, initTime);
+                        showNotification([], Date.now(), false, latestPubDate);
                     } catch (e) {
                         console.error('Failed to parse notification state', e);
-                        showNotification([], Date.now(), false, initTime);
+                        showNotification([], Date.now(), false, latestPubDate);
                     }
                 } else {
                     // No updates and no history -> "No updates"
-                    showNotification([], Date.now(), false, initTime);
+                    showNotification([], Date.now(), false, latestPubDate);
                 }
             }
         }
