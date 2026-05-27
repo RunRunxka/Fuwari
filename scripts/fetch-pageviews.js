@@ -35,9 +35,8 @@ async function getPageStats(websiteId, token, urlPath) {
     });
 
     if (urlPath === '/') {
-        // For root path (total site stats), do not include 'path' parameter
-        // OR if user specifically meant path=/ without eq., but usually no path means total stats
-        // Based on user instruction "直接不带eq参数即可" and context from swup-js.md
+        // 首页独立统计：只计 path=eq./
+        params.append('path', 'eq./');
     } else {
         params.append('path', `eq.${urlPath}`);
     }

@@ -1,14 +1,14 @@
 [
   {
     "pathname": "/",
-    "pageviews": 0
+    "pageviews": 1
   },
   {
     "pathname": "/posts/frist-blog/",
-    "pageviews": 0
+    "pageviews": 1
   },
   {
     "pathname": "/posts/welcome/",
-    "pageviews": 0
+    "pageviews": 1
   }
 ]
