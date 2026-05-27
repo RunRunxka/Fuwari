@@ -96,16 +96,19 @@ for (const post of posts) {
         window.requestAnimationFrame(step);
     }
 
-    // 使用 Umami 分享 API 获取访问量
+    // 使用 Umami 分享 API 获取首页访问量
     let countIncremented = false;
     async function loadSiteStats() {
         try {
-            const tokenRes = await fetch(`${umamiConfig.baseUrl}/api/share/${umamiConfig.shareId}`);
+            const tokenRes = await fetch(`${umamiConfig.baseUrl}/api/share/${umamiConfig.shareId}`, {
+                headers: { 'x-umami-share-context': '1' }
+            });
             if (!tokenRes.ok) return;
             const tokenData = await tokenRes.json();
             const token = tokenData.token;
 
-            const statsUrl = `${umamiConfig.baseUrl}/api/websites/${umamiConfig.websiteId}/stats?startAt=0&endAt=${Date.now()}`;
+            const startAt = new Date('2024-01-01').getTime();
+            const statsUrl = `${umamiConfig.baseUrl}/api/websites/${umamiConfig.websiteId}/stats?startAt=${startAt}&endAt=${Date.now()}&path=eq./`;
             const res = await fetch(statsUrl, {
                 headers: {
                     'x-umami-share-token': token,
