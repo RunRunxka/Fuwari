@@ -1,23 +1,18 @@
-/* Swup page transitions - disabled for debugging */
+/* Swup page transitions */
 html.is-changing .transition-swup-fade,
-html.is-animating .transition-swup-fade,
-html.is-changing .transition-swup-presence,
-html.is-changing .transition-swup-fade .onload-animation {
-    transition: none !important;
-    animation: none !important;
-    opacity: 1 !important;
+html.is-animating .transition-swup-fade {
+	transition: opacity 0.18s ease-out !important;
 }
 
-.onload-animation {
-    opacity: 1 !important;
-    animation: none !important;
+html.is-leaving .transition-swup-fade {
+	opacity: 0;
+	transition: opacity 0.12s ease-in !important;
 }
 
 #swup-container {
-    outline: none;
+	outline: none;
 }
 
 #post-container {
-    outline: none;
+	outline: none;
 }
-

@@ -12,6 +12,7 @@ interface Props {
 	hideUpdateDate?: boolean;
 	hidePublishedDate?: boolean;
 	slug?: string;
+	tags?: string[];
 }
 const {
 	published,
@@ -19,6 +20,7 @@ const {
 	hideUpdateDate = false,
 	hidePublishedDate = false,
 	slug,
+	tags = [],
 } = Astro.props;
 const className = Astro.props.class;
 ---
@@ -54,15 +56,19 @@ const className = Astro.props.class;
                 </div>
                 <span class="text-50 text-sm font-medium" id={`page-views-${slug}`}>0 次</span>
             </div>
-            <!--
-            <div class="flex items-center">
-                <div class="meta-icon">
-                    <Icon name="material-symbols:person" class="text-xl"></Icon>
-                </div>
-                <span class="text-50 text-sm font-medium" id={`page-visitors-${slug}`}>0 人</span>
-            </div>
-            -->
         </>
+    )}
+
+    <!-- tags -->
+    {tags.length > 0 && (
+        <div class="flex items-center flex-wrap gap-1.5">
+            <div class="meta-icon">
+                <Icon name="material-symbols:label-outline-rounded" class="text-xl"></Icon>
+            </div>
+            {tags.map(tag => (
+                <span class="tag-pill text-50 text-xs font-medium px-2 py-0.5 rounded-md bg-[var(--btn-regular-bg)] cursor-default select-none">{tag}</span>
+            ))}
+        </div>
     )}
 </div>
 

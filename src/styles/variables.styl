@@ -143,3 +143,9 @@ html.light
   --toc-btn-hover: oklch(0.92 0.008 var(--hue))
   --toc-btn-active: oklch(0.88 0.014 var(--hue))
   --toc-item-active: oklch(0.55 0.13 var(--hue))
+
+/* ===== 主题切换平滑过渡 ===== */
+html
+  transition: background-color 0.35s ease
+  *, *::before, *::after
+    transition: background-color 0.35s ease, border-color 0.35s ease, color 0.25s ease
