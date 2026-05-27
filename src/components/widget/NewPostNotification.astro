@@ -60,6 +60,9 @@ import { Icon } from "astro-icon/components";
                 <div class="flex items-center gap-2 text-[var(--primary)]">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
                     <h3 class="font-bold text-white">发现新文章</h3>
+                    <a href="/posts/how-to-use-notification/" class="ml-1 text-xs text-[var(--primary)] hover:underline opacity-80" title="查看说明">
+                        <Icon name="material-symbols:help-outline-rounded" size={16} />
+                    </a>
                 </div>
                 <div class="flex items-center gap-1">
                     <button id="clear-notification" class="text-white/50 hover:text-red-500 transition-colors p-1 rounded-md hover:bg-red-500/10" title="清空通知">
