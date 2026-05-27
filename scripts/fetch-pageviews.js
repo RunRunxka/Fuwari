@@ -4,8 +4,8 @@ import path from 'node:path';
 // Configuration based on src/config.ts
 const umamiConfig = {
     enable: true,
-    baseUrl: "https://u.xiegao.top",
-    shareId: "IoWiNCvTUPxaDg5x",
+    baseUrl: "http://8.137.196.229:3000",
+    shareId: "ZznBL7JvgUbAUEnW",
     timezone: "Asia/Shanghai",
 };
 
@@ -15,7 +15,9 @@ const OUTPUT_FILE = path.join(process.cwd(), 'pageviews.json');
 async function getAuthToken() {
     const url = `${umamiConfig.baseUrl}/api/share/${umamiConfig.shareId}`;
     console.log(`Fetching auth token from: ${url}`);
-    const response = await fetch(url);
+    const response = await fetch(url, {
+        headers: { 'x-umami-share-context': '1' }
+    });
     if (!response.ok) {
         throw new Error(`Failed to fetch auth token: ${response.status} ${response.statusText}`);
     }
@@ -24,13 +26,12 @@ async function getAuthToken() {
 
 async function getPageStats(websiteId, token, urlPath) {
     const endAt = Date.now();
-    const startAt = 0; // From 1970
+    const startAt = new Date('2024-01-01').getTime(); // reasonable baseline
     const params = new URLSearchParams({
         startAt: startAt.toString(),
         endAt: endAt.toString(),
         unit: 'hour',
         timezone: umamiConfig.timezone,
-        compare: 'false'
     });
 
     if (urlPath === '/') {
@@ -45,7 +46,8 @@ async function getPageStats(websiteId, token, urlPath) {
     
     const response = await fetch(apiUrl, {
         headers: {
-            'x-umami-share-token': token
+            'x-umami-share-token': token,
+            'x-umami-share-context': '1'
         }
     });
 
