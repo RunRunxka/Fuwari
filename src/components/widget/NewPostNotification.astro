@@ -310,16 +310,6 @@ import { Icon } from "astro-icon/components";
         return diffs;
     }
 
-    function escapeHtml(text) {
-        if (!text) return text;
-        return text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
-
     // Helper to show notification
     function showNotification(newPosts, timestamp, isFresh, lastPostTime) {
         const minimizedBtn = document.getElementById('notification-minimized');
@@ -329,8 +319,9 @@ import { Icon } from "astro-icon/components";
         const minimizeBtn = document.getElementById('minimize-notification');
         const clearBtn = document.getElementById('clear-notification');
         const NOTIFICATION_STATE_KEY = 'fuwari-notification-state';
-        const INIT_TIME_KEY = 'fuwari-notification-init-time';
-        
+
+        let autoOpenTimer = null;
+
         if (!minimizedBtn || !panel || !list) return;
         
         requestAnimationFrame(() => {
@@ -419,12 +410,10 @@ import { Icon } from "astro-icon/components";
              dot?.classList.remove('scale-0');
              // Auto-open panel only on first detection (isFresh)
              if (isFresh) {
-                 setTimeout(() => {
+                 autoOpenTimer = setTimeout(() => {
                      openPanel();
                  }, 1500);
              }
-        } else {
-             dot?.classList.add('scale-0');
         }
 
         setupEventListeners();
@@ -464,8 +453,8 @@ import { Icon } from "astro-icon/components";
                 clone.style.opacity = '1'
                 clone.style.pointerEvents = 'auto'
                 clone.style.transform = 'none'
+                const listEl = clone.querySelector('#new-post-list');
                 clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'))
-                const listEl = clone.querySelector('#new-post-list')
                 if (listEl instanceof HTMLElement) {
                     listEl.style.maxHeight = 'none'
                     listEl.style.overflow = 'visible'
@@ -503,6 +492,10 @@ import { Icon } from "astro-icon/components";
                 clearTimeout(Number(prevTimer));
                 panel.removeAttribute('data-open-timer');
             }
+            if (autoOpenTimer) {
+                clearTimeout(autoOpenTimer);
+                autoOpenTimer = null;
+            }
             panel.classList.remove('is-open-content');
             panel.classList.remove('is-open');
         }
@@ -516,10 +509,12 @@ import { Icon } from "astro-icon/components";
                 }
             };
     
-            minimizeBtn.onclick = (e) => {
-                e.stopPropagation();
-                closePanel();
-            };
+            if (minimizeBtn) {
+                minimizeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    closePanel();
+                };
+            }
 
             if (clearBtn) {
                 clearBtn.onclick = (e) => {
@@ -527,9 +522,8 @@ import { Icon } from "astro-icon/components";
                     localStorage.removeItem(NOTIFICATION_STATE_KEY);
                     
                     const now = Date.now();
-                    localStorage.setItem(INIT_TIME_KEY, now.toString());
-                    
-                    showNotification([], now, false, now);
+
+                    showNotification([], now, false, lastPostTime);
                 };
             }
     
@@ -540,11 +534,13 @@ import { Icon } from "astro-icon/components";
             if (!panel.hasAttribute('data-resize-listening')) {
                 window.addEventListener('resize', () => {
                     if (!panel.classList.contains('is-open')) return
-                    updatePanelTargetSize()
+                    if (typeof panel._updateSize === 'function') panel._updateSize()
                 })
                 panel.setAttribute('data-resize-listening', 'true')
             }
         }
+
+        panel._updateSize = updatePanelTargetSize;
         
         // Auto-open panel on first load if it's high priority? 
          // Or keep it minimized to be less intrusive?
@@ -587,8 +583,10 @@ import { Icon } from "astro-icon/components";
         const latestPubDate = Math.max(...currentPosts.map(p => p.pubDate || 0));
 
         const db = await openDB();
-        const storedPostsOld = await getStoredPosts(db, STORE_OLD);
-        const storedPostsNew = await getStoredPosts(db, STORE_NEW);
+        const [storedPostsOld, storedPostsNew] = await Promise.all([
+            getStoredPosts(db, STORE_OLD),
+            getStoredPosts(db, STORE_NEW)
+        ]);
         let storedPosts = storedPostsOld;
         if (storedPostsNew.length > 0) {
             storedPosts = storedPostsNew;
@@ -596,15 +594,6 @@ import { Icon } from "astro-icon/components";
             await savePosts(db, STORE_OLD, storedPostsNew);
         }
         const NOTIFICATION_STATE_KEY = 'fuwari-notification-state';
-        const INIT_TIME_KEY = 'fuwari-notification-init-time';
-
-        // Helper to get or set init time
-        let initTimestamp = localStorage.getItem(INIT_TIME_KEY);
-        if (!initTimestamp) {
-            initTimestamp = Date.now().toString();
-            localStorage.setItem(INIT_TIME_KEY, initTimestamp);
-        }
-        const initTime = parseInt(initTimestamp);
 
         // Migration from localStorage (Old cache)
         const localCache = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -657,8 +646,8 @@ import { Icon } from "astro-icon/components";
                              const d = computeDiff(stored.content, post.content);
                              if (d) {
                                  result.content = d;
-                                 hasChanges = true;
                              }
+                             hasChanges = true;
                         }
                         
                         if (descriptionChanged) {
@@ -730,22 +719,8 @@ import { Icon } from "astro-icon/components";
                 // Show with Red Dot + Auto Open
                 showNotification(detectedChanges, timestamp, true, latestPubDate);
             } else {
-                // CASE 2: No new updates
-                // Check if we have a persisted notification state
-                const persistedStateStr = localStorage.getItem(NOTIFICATION_STATE_KEY);
-                if (persistedStateStr) {
-                    try {
-                        const state = JSON.parse(persistedStateStr);
-                        // Show persisted items, NO Red Dot, NO Auto Open
-                        showNotification([], Date.now(), false, latestPubDate);
-                    } catch (e) {
-                        console.error('Failed to parse notification state', e);
-                        showNotification([], Date.now(), false, latestPubDate);
-                    }
-                } else {
-                    // No updates and no history -> "No updates"
-                    showNotification([], Date.now(), false, latestPubDate);
-                }
+                // No new updates — show empty state
+                showNotification([], Date.now(), false, latestPubDate);
             }
         }
     } catch (e) {
