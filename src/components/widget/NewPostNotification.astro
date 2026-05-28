@@ -122,7 +122,8 @@ import { Icon } from "astro-icon/components";
     const LOCAL_STORAGE_KEY = 'blog-posts-cache'; 
     const NOTIFICATION_ID = 'new-post-notification';
     const LIST_ID = 'new-post-list';
-    
+    let savedLastPostTime = 0;
+
     // Compute a context-aware ID for the current site/path
     const BASE_PATH = (import.meta.env.BASE_URL ?? '/');
     const SCOPE_ID = BASE_PATH.replace(/^\/+|\/+$/g, '') || 'root';
@@ -329,6 +330,10 @@ import { Icon } from "astro-icon/components";
             dot?.classList.remove('translate-y-20', 'opacity-0');
         });
 
+        if (lastPostTime > 0) {
+            savedLastPostTime = lastPostTime;
+        }
+
         const lastPostTimeStr = lastPostTime > 0
             ? new Date(lastPostTime).toLocaleString()
             : '';
@@ -523,7 +528,7 @@ import { Icon } from "astro-icon/components";
                     
                     const now = Date.now();
 
-                    showNotification([], now, false, lastPostTime);
+                    showNotification([], now, false, savedLastPostTime);
                 };
             }
     
