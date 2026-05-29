@@ -59,8 +59,8 @@ export const siteConfig: SiteConfig = {
 		},
 	],
 	officialSites: [
-		{ url: "http://8.137.196.229", alias: "CN" },
-		{ url: "http://8.137.196.229", alias: "Global" },
+		{ url: "https://runrunxka.xyz", alias: "CN" },
+		{ url: "https://runrunxka.xyz", alias: "Global" },
 	],
 	server: [
 		{ url: "", text: "Blog" },
@@ -91,13 +91,13 @@ export const navBarConfig: NavBarConfig = {
 		},
 		{
 			name: "统计",
-			url: "http://8.137.196.229:3000/share/ZznBL7JvgUbAUEnW",
+			url: "https://statistics.runrunxka.xyz",
 			external: true,
 			icon: "material-symbols:table-chart",
 		},
 		{
 			name: "云盘",
-			url: "http://8.137.196.229:5244",
+			url: "https://pan.runrunxka.xyz",
 			external: true,
 			icon: "material-symbols:cloud-outline",
 		},
@@ -146,7 +146,7 @@ export const imageFallbackConfig: ImageFallbackConfig = {
 
 export const umamiConfig: UmamiConfig = {
 	enable: true,
-	baseUrl: "http://8.137.196.229:3000",
+	baseUrl: "https://statistics.runrunxka.xyz",
 	shareId: "ZznBL7JvgUbAUEnW",
 	websiteId: "db45af07-07c2-407b-b816-b6227ff1e3b4",
 	timezone: "Asia/Shanghai",

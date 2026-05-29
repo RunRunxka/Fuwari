@@ -4,7 +4,7 @@ import path from 'node:path';
 // Configuration based on src/config.ts
 const umamiConfig = {
     enable: true,
-    baseUrl: "http://8.137.196.229:3000",
+    baseUrl: "https://statistics.runrunxka.xyz",
     shareId: "ZznBL7JvgUbAUEnW",
     timezone: "Asia/Shanghai",
 };
