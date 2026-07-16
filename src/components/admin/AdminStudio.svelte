@@ -54,6 +54,7 @@ const themeModeIcons: Record<ThemeMode, string> = {
 };
 
 const SESSION_STORAGE_KEY = "fuwari-studio:session";
+const DRAFT_STORAGE_PREFIX = "fuwari-studio:draft:";
 
 let rootElement: HTMLElement;
 let editorPanel: HTMLElement;
@@ -179,19 +180,98 @@ function createEmptyPost(): AdminPost {
 }
 
 function getStorageKey(id: string): string {
-	return `fuwari-studio:draft:${id}`;
+	return `${DRAFT_STORAGE_PREFIX}${id}`;
+}
+
+function parseStoredDraft(raw: string): StoredDraft | null {
+	try {
+		const stored = JSON.parse(raw) as Partial<StoredDraft>;
+		const post = stored.post as Partial<AdminPost> | undefined;
+		if (
+			typeof stored.savedAt !== "string" ||
+			Number.isNaN(new Date(stored.savedAt).getTime()) ||
+			!post ||
+			typeof post.id !== "string" ||
+			typeof post.slug !== "string" ||
+			typeof post.title !== "string" ||
+			typeof post.published !== "string" ||
+			typeof post.description !== "string" ||
+			typeof post.image !== "string" ||
+			!Array.isArray(post.tags) ||
+			!post.tags.every((tag) => typeof tag === "string") ||
+			typeof post.lang !== "string" ||
+			typeof post.draft !== "boolean" ||
+			typeof post.pinned !== "boolean" ||
+			typeof post.body !== "string"
+		) {
+			return null;
+		}
+		return stored as StoredDraft;
+	} catch {
+		return null;
+	}
 }
 
 function readStoredDraft(post: AdminPost): StoredDraft | null {
 	try {
 		const raw = localStorage.getItem(getStorageKey(post.id));
 		if (!raw) return null;
-		const stored = JSON.parse(raw) as StoredDraft;
+		const stored = parseStoredDraft(raw);
 		if (!stored?.post || stored.post.id !== post.id) return null;
 		return stored;
 	} catch {
 		return null;
 	}
+}
+
+function readAllStoredDrafts(): StoredDraft[] {
+	const storedDrafts: StoredDraft[] = [];
+	for (let index = 0; index < localStorage.length; index += 1) {
+		const key = localStorage.key(index);
+		if (!key?.startsWith(DRAFT_STORAGE_PREFIX)) continue;
+		const raw = localStorage.getItem(key);
+		if (!raw) continue;
+		const stored = parseStoredDraft(raw);
+		if (stored && key === getStorageKey(stored.post.id)) {
+			storedDrafts.push(stored);
+		}
+	}
+	return storedDrafts.sort(
+		(a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
+	);
+}
+
+function restoreStoredDrafts(): void {
+	const storedDrafts = readAllStoredDrafts();
+	const storedById = new Map(
+		storedDrafts.map((stored) => [stored.post.id, stored]),
+	);
+	const repositoryIds = new Set(workspacePosts.map((post) => post.id));
+	const localOnlyPosts = storedDrafts
+		.filter((stored) => !repositoryIds.has(stored.post.id))
+		.map((stored) => cloneAdminPost(stored.post));
+	const repositoryPosts = workspacePosts.map((post) => {
+		const stored = storedById.get(post.id);
+		if (!stored) return post;
+		return {
+			...cloneAdminPost(stored.post),
+			sourceSlug: stored.post.sourceSlug ?? post.sourceSlug,
+		};
+	});
+
+	workspacePosts = [...localOnlyPosts, ...repositoryPosts];
+	const initial = workspacePosts[0];
+	if (!initial) return;
+	currentPost = cloneAdminPost(initial);
+	selectedId = initial.id;
+	tagsInput = initial.tags.join(", ");
+	const stored = storedById.get(initial.id);
+	if (!stored) return;
+	saveState = "saved";
+	savedAt = new Intl.DateTimeFormat("zh-CN", {
+		hour: "2-digit",
+		minute: "2-digit",
+	}).format(new Date(stored.savedAt));
 }
 
 function syncPostToWorkspace(): void {
@@ -533,23 +613,7 @@ function showNotice(message: string): void {
 onMount(() => {
 	themeMode = getThemeMode();
 	void initializeAuth();
-	const initial = workspacePosts[0];
-	if (initial) {
-		const stored = readStoredDraft(initial);
-		if (stored) {
-			const restoredPost = cloneAdminPost(stored.post);
-			currentPost = {
-				...restoredPost,
-				sourceSlug: restoredPost.sourceSlug ?? initial.sourceSlug,
-			};
-			tagsInput = currentPost.tags.join(", ");
-			saveState = "saved";
-			savedAt = new Intl.DateTimeFormat("zh-CN", {
-				hour: "2-digit",
-				minute: "2-digit",
-			}).format(new Date(stored.savedAt));
-		}
-	}
+	restoreStoredDrafts();
 
 	const media = gsap.matchMedia();
 	media.add(
