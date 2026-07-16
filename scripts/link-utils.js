@@ -6,6 +6,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const TIMEOUT = 10000;
+export const DEFAULT_RETRY_ATTEMPTS = 3;
+export const DEFAULT_RETRY_DELAY = 2000;
 
 /**
  * 从 astro.config.mjs 获取站点 URL
@@ -52,6 +54,34 @@ export async function checkUrl(url, timeoutMs = TIMEOUT) {
     } finally {
         clearTimeout(timer);
     }
+}
+
+/**
+ * 对临时网络故障进行有限重试，避免一次超时或 5xx 就判定链接失效。
+ */
+export async function checkUrlWithRetry(
+    url,
+    {
+        attempts = DEFAULT_RETRY_ATTEMPTS,
+        delayMs = DEFAULT_RETRY_DELAY,
+        timeoutMs = TIMEOUT,
+    } = {},
+) {
+    const maxAttempts = Math.max(1, attempts);
+    let lastResult = { ok: false, status: 'Not checked' };
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        lastResult = await checkUrl(url, timeoutMs);
+        if (lastResult.ok) {
+            return { ...lastResult, attempts: attempt };
+        }
+
+        if (attempt < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+    }
+
+    return { ...lastResult, attempts: maxAttempts };
 }
 
 /**

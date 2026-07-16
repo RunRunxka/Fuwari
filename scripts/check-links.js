@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getSiteUrl, checkUrl, verifyBacklinkPresence, TIMEOUT } from './link-utils.js';
+import { getSiteUrl, checkUrlWithRetry, verifyBacklinkPresence } from './link-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,7 +58,7 @@ async function processFile(filePath, type) {
                 checkUrlTarget = SITE_URL + '/' + checkUrlTarget.replace(/^\/+/, '');
             }
 
-            urlResult = await checkUrl(checkUrlTarget);
+            urlResult = await checkUrlWithRetry(checkUrlTarget);
             if (urlResult.ok) {
                 stats.success++;
             } else {
@@ -70,7 +70,7 @@ async function processFile(filePath, type) {
         // Check Backlink if present
         if (data.url && urlResult.ok && data.backlink && SITE_URL) {
             stats.total++;
-            const backlinkCheck = await checkUrl(data.backlink);
+            const backlinkCheck = await checkUrlWithRetry(data.backlink);
             if (backlinkCheck.ok) {
                 const found = verifyBacklinkPresence(backlinkCheck.body, SITE_URL);
                 if (found) {
@@ -88,25 +88,16 @@ async function processFile(filePath, type) {
             }
         }
 
-        // If URL check failed OR Backlink check failed, delete the file
-        const shouldDelete = (data.url && !urlResult.ok && urlResult.status !== 'N/A') || (data.backlink && !backlinkResult.ok);
+        // URL 或反向链接失败时只报告，不在无人审核的定时任务中删除文件。
+        const hasPrimaryFailure = (data.url && !urlResult.ok && urlResult.status !== 'N/A') || (data.backlink && !backlinkResult.ok);
         
-        if (shouldDelete) {
+        if (hasPrimaryFailure) {
              // Print output for failed checks
              let output = `${colors.cyan}${name}${colors.reset}：`;
              if (!urlResult.ok && urlResult.status !== 'N/A') output += `url：${colors.red}${urlResult.status}${colors.reset} `;
              if (data.backlink && !backlinkResult.ok) output += `backlink：${colors.red}${backlinkResult.status}${colors.reset}`;
              console.log(output);
-
-             // DELETE THE FILE
-             try {
-                 fs.unlinkSync(filePath);
-                 console.log(`${colors.red}DELETED file: ${filePath}${colors.reset}`);
-             } catch (delErr) {
-                 console.error(`${colors.red}Failed to delete file: ${delErr.message}${colors.reset}`);
-             }
-
-             return;
+             console.log(`${colors.yellow}REPORTED only; no file was deleted.${colors.reset}`);
         }
 
         // Check Avatar
@@ -119,7 +110,7 @@ async function processFile(filePath, type) {
                 avatarTarget = SITE_URL + '/' + avatarTarget.replace(/^\/+/, '');
             }
 
-            avatarResult = await checkUrl(avatarTarget);
+            avatarResult = await checkUrlWithRetry(avatarTarget);
             if (avatarResult.ok) {
                 stats.success++;
             } else {
@@ -172,6 +163,7 @@ async function main() {
     console.log(`${colors.magenta}=== Starting Link Checker ===${colors.reset}`);
     
     await scanDirectory('friends', 'Friend');
+    await scanDirectory('sponsors', 'Sponsor');
 
     console.log(`\n${colors.magenta}=== Summary ===${colors.reset}`);
     console.log(`Total checks: ${stats.total}`);
@@ -194,19 +186,16 @@ async function main() {
             summary += '|------|------|-------|-------|--------|-----|\n';
             
             stats.errors.forEach(err => {
-                const action = (err.field === 'url' || err.field === 'backlink') ? '🗑️ Deleted' : '⚠️ Kept';
+                const action = '⚠️ Reported';
                 summary += `| ${err.type} | ${err.name} | ${err.field} | ${err.error} | ${action} | ${err.value} |\n`;
             });
             
-            summary += '\n> **Note**: Files are automatically deleted if their primary `url` is inaccessible OR if the `backlink` verification fails (when provided). Avatar failures only trigger a warning.\n';
+            summary += '\n> **Note**: Link failures are reported only. No data files are deleted automatically.\n';
             
             fs.appendFileSync(summaryPath, summary);
         }
         
-        // We still exit with 1 to mark the job as failed (or maybe success since we handled it by deleting?)
-        // User said "automatically delete", usually implies the workflow should commit changes.
-        // So we should probably exit 0 if we only deleted files, but if there are other errors (like avatar failed but not deleted) we might want to warn.
-        // But for now let's exit 1 so the user gets notified that cleanup happened.
+        // 标记工作流失败以提醒维护者查看报告，但不修改仓库内容。
         process.exit(1); 
     } else {
         if (process.env.GITHUB_STEP_SUMMARY) {
