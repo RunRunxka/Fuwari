@@ -82,6 +82,8 @@ git push origin main
 
 推送后 GitHub Actions 自动构建并 rsync 到服务器，约 1 分钟后生效。
 
+也可以通过 `/admin/` 进入 **Fuwari Studio**，在浏览器中编辑、预览并创建文章发布 PR。管理端使用 GitHub OAuth 登录，实际仓库写入由最小权限 GitHub App 完成，不需要在浏览器保存 PAT。发布服务的创建、密钥配置和部署步骤见 [`admin-worker/README.md`](admin-worker/README.md)。
+
 ## 🏗️ 部署架构
 
 ```

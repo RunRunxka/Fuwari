@@ -61,6 +61,7 @@ export function validateAdminPost(post: AdminPost): string[] {
 		errors.push("发布日期格式无效");
 	}
 	if (!post.body.trim()) errors.push("文章正文不能为空");
+	if (post.draft) errors.push("发布前请关闭草稿开关");
 	if (post.aiLevel && ![1, 2, 3].includes(post.aiLevel)) {
 		errors.push("AI 参与等级只能是 1、2 或 3");
 	}

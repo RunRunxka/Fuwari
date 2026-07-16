@@ -3,6 +3,7 @@ export type AdminPostStatus = "draft" | "published";
 export interface AdminPost {
 	id: string;
 	slug: string;
+	sourceSlug?: string;
 	title: string;
 	published: string;
 	updated?: string;
@@ -20,6 +21,19 @@ export interface AdminPublishResult {
 	pullRequestUrl: string;
 	branch: string;
 	commit: string;
+	pullRequestNumber?: number;
+}
+
+export interface AdminSessionUser {
+	login: string;
+	name: string;
+	avatarUrl: string;
+}
+
+export interface AdminAuthStatus {
+	authenticated: true;
+	user: AdminSessionUser;
+	expiresAt: string;
 }
 
 export function getAdminPostStatus(post: AdminPost): AdminPostStatus {

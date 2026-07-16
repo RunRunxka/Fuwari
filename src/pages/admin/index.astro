@@ -18,6 +18,7 @@ const posts: AdminPost[] = entries
 	.map((entry) => ({
 		id: entry.id,
 		slug: entry.slug,
+		sourceSlug: entry.slug,
 		title: entry.data.title,
 		published: toDateTimeInput(entry.data.published) ?? "",
 		updated: toDateTimeInput(entry.data.updated),

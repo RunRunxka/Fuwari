@@ -1,5 +1,10 @@
 <script lang="ts">
-import type { AdminPost, AdminPublishResult } from "@/types/admin";
+import type {
+	AdminAuthStatus,
+	AdminPost,
+	AdminPublishResult,
+	AdminSessionUser,
+} from "@/types/admin";
 import {
 	DARK_MODE,
 	LIGHT_MODE,
@@ -21,6 +26,12 @@ import AdminPostPreview from "./AdminPostPreview.svelte";
 type PostFilter = "all" | "draft" | "published";
 type MobileView = "articles" | "editor" | "preview";
 type SaveState = "idle" | "saving" | "saved";
+type AuthState =
+	| "disabled"
+	| "checking"
+	| "anonymous"
+	| "authenticated"
+	| "unavailable";
 
 interface StoredDraft {
 	post: AdminPost;
@@ -42,6 +53,8 @@ const themeModeIcons: Record<ThemeMode, string> = {
 	[LIGHT_MODE]: "material-symbols:light-mode-outline-rounded",
 };
 
+const SESSION_STORAGE_KEY = "fuwari-studio:session";
+
 let rootElement: HTMLElement;
 let editorPanel: HTMLElement;
 let previewPanel: HTMLElement;
@@ -61,12 +74,17 @@ let savedAt = "";
 let notice = "";
 let publishResult: AdminPublishResult | null = null;
 let isPublishing = false;
+let authState: AuthState = apiBase ? "checking" : "disabled";
+let authUser: AdminSessionUser | null = null;
+let sessionToken = "";
+let sessionExpiresAt = "";
 let themeMode: ThemeMode = SYSTEM_MODE;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let selectionTween: ReturnType<typeof gsap.fromTo> | undefined;
 let noticeTween: ReturnType<typeof gsap.fromTo> | undefined;
 
 $: normalizedQuery = query.trim().toLowerCase();
+$: normalizedApiBase = apiBase.replace(/\/+$/, "");
 $: filteredPosts = workspacePosts.filter((post) => {
 	const matchesFilter =
 		filter === "all" ||
@@ -97,7 +115,11 @@ $: publishSteps = [
 	},
 	{
 		label: "GitHub 预览分支",
-		detail: publishResult?.branch || "尚未创建",
+		detail: publishResult
+			? isDirty
+				? "PR 已创建；当前改动尚未包含"
+				: publishResult.branch
+			: "尚未创建",
 		done: Boolean(publishResult),
 	},
 	{
@@ -109,6 +131,32 @@ $: publishSteps = [
 $: publishProgress =
 	publishSteps.filter((step) => step.done).length / publishSteps.length;
 $: themeIcon = themeModeIcons[themeMode] ?? themeModeIcons[SYSTEM_MODE];
+$: publishActionLabel = publishResult
+	? "PR 已创建"
+	: isPublishing
+		? "正在发布"
+		: authState === "authenticated"
+			? "准备发布"
+			: authState === "checking"
+				? "验证身份"
+				: apiBase
+					? "登录后发布"
+					: "准备发布";
+$: publishActionIcon = isPublishing
+	? "material-symbols:progress-activity"
+	: publishResult
+		? "material-symbols:check-circle-outline-rounded"
+		: authState === "authenticated"
+			? "material-symbols:publish-rounded"
+			: "fa6-brands:github";
+$: publishActionDisabled =
+	isPublishing || authState === "checking" || Boolean(publishResult);
+$: sessionExpiryLabel = sessionExpiresAt
+	? new Intl.DateTimeFormat("zh-CN", {
+			hour: "2-digit",
+			minute: "2-digit",
+		}).format(new Date(sessionExpiresAt))
+	: "";
 
 function createEmptyPost(): AdminPost {
 	const now = new Date();
@@ -178,7 +226,6 @@ function saveLocalDraft(): void {
 function scheduleLocalSave(): void {
 	isDirty = true;
 	saveState = "saving";
-	publishResult = null;
 	if (saveTimer) clearTimeout(saveTimer);
 	saveTimer = setTimeout(saveLocalDraft, 650);
 }
@@ -201,7 +248,11 @@ async function selectPost(post: AdminPost): Promise<void> {
 	}
 	if (saveTimer) saveLocalDraft();
 	const stored = readStoredDraft(post);
-	currentPost = cloneAdminPost(stored?.post ?? post);
+	const restoredPost = cloneAdminPost(stored?.post ?? post);
+	currentPost = {
+		...restoredPost,
+		sourceSlug: restoredPost.sourceSlug ?? post.sourceSlug,
+	};
 	selectedId = post.id;
 	tagsInput = currentPost.tags.join(", ");
 	savedAt = stored?.savedAt
@@ -263,32 +314,163 @@ function downloadMarkdown(): void {
 	showNotice("Markdown 已导出，可直接放入文章目录。");
 }
 
+function clearAdminSession(): void {
+	sessionToken = "";
+	authUser = null;
+	sessionExpiresAt = "";
+	try {
+		sessionStorage.removeItem(SESSION_STORAGE_KEY);
+	} catch {
+		// Storage can be unavailable in private browsing; in-memory logout still works.
+	}
+}
+
+function saveAdminSession(token: string): void {
+	sessionToken = token;
+	try {
+		sessionStorage.setItem(SESSION_STORAGE_KEY, token);
+	} catch {
+		// Keep the authenticated session in memory when storage is unavailable.
+	}
+}
+
+function readAdminSession(): string {
+	try {
+		return sessionStorage.getItem(SESSION_STORAGE_KEY) ?? "";
+	} catch {
+		return "";
+	}
+}
+
+function clearAuthFragment(): void {
+	if (!window.location.hash) return;
+	window.history.replaceState(
+		window.history.state,
+		"",
+		`${window.location.pathname}${window.location.search}`,
+	);
+}
+
+async function initializeAuth(): Promise<void> {
+	if (!normalizedApiBase) {
+		authState = "disabled";
+		return;
+	}
+
+	authState = "checking";
+	const fragment = new URLSearchParams(window.location.hash.slice(1));
+	const returnedSession = fragment.get("studio_session") ?? "";
+	const authError = fragment.get("auth_error") ?? "";
+	if (returnedSession || authError) clearAuthFragment();
+	if (authError) showNotice(authError);
+	if (returnedSession) saveAdminSession(returnedSession);
+	else sessionToken = readAdminSession();
+
+	if (!sessionToken) {
+		authState = "anonymous";
+		return;
+	}
+
+	try {
+		const response = await fetch(`${normalizedApiBase}/api/auth/status`, {
+			headers: { Authorization: `Bearer ${sessionToken}` },
+		});
+		if (!response.ok) {
+			if (response.status === 401 || response.status === 403) {
+				clearAdminSession();
+				authState = "anonymous";
+				return;
+			}
+			throw new Error(`身份服务响应异常（${response.status}）`);
+		}
+		const status = (await response.json()) as AdminAuthStatus;
+		authUser = status.user;
+		sessionExpiresAt = status.expiresAt;
+		authState = "authenticated";
+	} catch (error) {
+		authState = "unavailable";
+		showNotice(
+			error instanceof Error ? error.message : "暂时无法连接 GitHub 身份服务",
+		);
+	}
+}
+
+function startGitHubLogin(): void {
+	if (!normalizedApiBase) {
+		showNotice("GitHub 发布服务尚未配置；请先部署 admin-worker。");
+		return;
+	}
+	window.location.assign(`${normalizedApiBase}/api/auth/login`);
+}
+
+function signOut(): void {
+	clearAdminSession();
+	authState = normalizedApiBase ? "anonymous" : "disabled";
+	showNotice("已退出 Fuwari Studio 管理会话。");
+}
+
+function handlePublishAction(): void {
+	if (authState !== "authenticated") {
+		if (authState === "unavailable") {
+			void initializeAuth();
+			return;
+		}
+		startGitHubLogin();
+		return;
+	}
+	void publishCurrentPost();
+}
+
+function handleAuthAction(): void {
+	if (authState === "unavailable") {
+		void initializeAuth();
+		return;
+	}
+	startGitHubLogin();
+}
+
 async function publishCurrentPost(): Promise<void> {
 	if (validationErrors.length > 0) {
 		showNotice(`发布前需要处理 ${validationErrors.length} 项内容问题。`);
 		return;
 	}
-	if (!apiBase) {
+	if (!normalizedApiBase) {
 		showNotice("GitHub 发布服务尚未配置；当前版本可保存草稿和导出 Markdown。");
+		return;
+	}
+	if (!sessionToken || authState !== "authenticated") {
+		startGitHubLogin();
 		return;
 	}
 
 	isPublishing = true;
 	try {
 		const response = await fetch(
-			`${apiBase}/api/posts/${encodeURIComponent(currentPost.slug)}/publish`,
+			`${normalizedApiBase}/api/posts/${encodeURIComponent(currentPost.slug)}/publish`,
 			{
 				method: "POST",
-				credentials: "include",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ content: serializeAdminPost(currentPost) }),
+				headers: {
+					Authorization: `Bearer ${sessionToken}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					content: serializeAdminPost(currentPost),
+					sourceSlug: currentPost.sourceSlug,
+				}),
 			},
 		);
+		const result = (await response.json().catch(() => null)) as
+			| (AdminPublishResult & { error?: string })
+			| null;
 		if (!response.ok) {
-			const message = await response.text();
-			throw new Error(message || `发布请求失败（${response.status}）`);
+			if (response.status === 401) {
+				clearAdminSession();
+				authState = "anonymous";
+			}
+			throw new Error(result?.error || `发布请求失败（${response.status}）`);
 		}
-		publishResult = (await response.json()) as AdminPublishResult;
+		if (!result?.pullRequestUrl) throw new Error("发布服务返回结果不完整");
+		publishResult = result;
 		showNotice("发布 PR 已创建，等待 GitHub 检查完成。");
 	} catch (error) {
 		showNotice(error instanceof Error ? error.message : "发布请求失败");
@@ -350,11 +532,16 @@ function showNotice(message: string): void {
 
 onMount(() => {
 	themeMode = getThemeMode();
+	void initializeAuth();
 	const initial = workspacePosts[0];
 	if (initial) {
 		const stored = readStoredDraft(initial);
 		if (stored) {
-			currentPost = cloneAdminPost(stored.post);
+			const restoredPost = cloneAdminPost(stored.post);
+			currentPost = {
+				...restoredPost,
+				sourceSlug: restoredPost.sourceSlug ?? initial.sourceSlug,
+			};
 			tagsInput = currentPost.tags.join(", ");
 			saveState = "saved";
 			savedAt = new Intl.DateTimeFormat("zh-CN", {
@@ -438,13 +625,27 @@ onMount(() => {
 			<button class="studio-button button-quiet icon-button" type="button" aria-label="切换主题" onclick={cycleTheme}>
 				<Icon icon={themeIcon} />
 			</button>
+			{#if authState === "authenticated" && authUser}
+				<div class="topbar-user" title={`已登录 @${authUser.login}`}>
+					<img src={authUser.avatarUrl} alt="" />
+					<span>@{authUser.login}</span>
+					<button type="button" aria-label="退出 GitHub 管理会话" onclick={signOut}>
+						<Icon icon="material-symbols:logout-rounded" />
+					</button>
+				</div>
+			{:else if normalizedApiBase}
+				<button class="studio-button button-quiet" type="button" disabled={authState === "checking"} onclick={handleAuthAction}>
+					<Icon icon={authState === "checking" ? "material-symbols:progress-activity" : "fa6-brands:github"} />
+					<span>{authState === "checking" ? "验证身份" : authState === "unavailable" ? "重试身份" : "GitHub 登录"}</span>
+				</button>
+			{/if}
 			<button class="studio-button button-quiet" type="button" onclick={saveLocalDraft}>
 				<Icon icon="material-symbols:save-outline-rounded" />
 				<span>保存草稿</span>
 			</button>
-			<button class="studio-button button-primary" type="button" disabled={isPublishing} onclick={publishCurrentPost}>
-				<Icon icon={isPublishing ? "material-symbols:progress-activity" : "material-symbols:publish-rounded"} />
-				<span>{isPublishing ? "正在发布" : "准备发布"}</span>
+			<button class="studio-button button-primary" type="button" disabled={publishActionDisabled} onclick={handlePublishAction}>
+				<Icon icon={publishActionIcon} />
+				<span>{publishActionLabel}</span>
 			</button>
 		</div>
 	</header>
@@ -615,6 +816,33 @@ onMount(() => {
 					</div>
 					<span>{Math.round(publishProgress * 100)}%</span>
 				</div>
+				<div class:connected={authState === "authenticated"} class="auth-session">
+					{#if authState === "authenticated" && authUser}
+						<img src={authUser.avatarUrl} alt="" />
+						<span class="auth-copy">
+							<strong>{authUser.name}</strong>
+							<small>@{authUser.login} · 会话至 {sessionExpiryLabel}</small>
+						</span>
+						<button type="button" aria-label="退出 GitHub 管理会话" onclick={signOut}>
+							<Icon icon="material-symbols:logout-rounded" />
+						</button>
+					{:else if authState === "disabled"}
+						<Icon icon="material-symbols:cloud-off-outline-rounded" />
+						<span class="auth-copy">
+							<strong>发布服务未配置</strong>
+							<small>仍可保存草稿或导出 Markdown。</small>
+						</span>
+					{:else}
+						<Icon icon={authState === "checking" ? "material-symbols:progress-activity" : "fa6-brands:github"} />
+						<span class="auth-copy">
+							<strong>{authState === "checking" ? "正在验证管理身份" : authState === "unavailable" ? "身份服务暂不可用" : "需要 GitHub 登录"}</strong>
+							<small>登录后由 GitHub App 创建草稿 PR。</small>
+						</span>
+						<button class="auth-action" type="button" disabled={authState === "checking"} onclick={handleAuthAction}>
+							{authState === "unavailable" ? "重试" : "登录"}
+						</button>
+					{/if}
+				</div>
 				<div class="progress-track"><span style={`transform: scaleX(${publishProgress})`}></span></div>
 				<ol class="publish-steps">
 					{#each publishSteps as step, index}
@@ -753,6 +981,45 @@ onMount(() => {
 	.topbar-actions {
 		justify-content: flex-end;
 		gap: 0.48rem;
+	}
+
+	.topbar-user {
+		display: flex;
+		align-items: center;
+		gap: 0.42rem;
+		min-height: 2.5rem;
+		padding: 0.25rem 0.35rem 0.25rem 0.25rem;
+		border: 1px solid color-mix(in oklab, var(--primary) 18%, var(--line-divider));
+		border-radius: 0.7rem;
+		background: color-mix(in oklab, var(--primary) 7%, var(--btn-regular-bg));
+	}
+
+	.topbar-user img,
+	.auth-session img {
+		width: 1.85rem;
+		height: 1.85rem;
+		border-radius: 0.55rem;
+		object-fit: cover;
+	}
+
+	.topbar-user > span {
+		max-width: 7rem;
+		overflow: hidden;
+		font-family: "JetBrains Mono Variable", monospace;
+		font-size: 0.67rem;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.topbar-user button,
+	.auth-session button {
+		display: grid;
+		place-items: center;
+		width: 1.8rem;
+		height: 1.8rem;
+		border-radius: 0.5rem;
+		background: var(--btn-regular-bg);
+		color: color-mix(in oklab, var(--btn-content) 62%, transparent);
 	}
 
 	.studio-button,
@@ -1261,6 +1528,57 @@ onMount(() => {
 		padding: 1rem;
 	}
 
+	.auth-session {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.65rem;
+		margin-top: 0.9rem;
+		padding: 0.7rem;
+		border: 1px solid var(--line-divider);
+		border-radius: 0.72rem;
+		background: color-mix(in oklab, var(--btn-regular-bg) 72%, transparent);
+	}
+
+	.auth-session.connected {
+		border-color: color-mix(in oklab, oklch(0.7 0.13 155) 28%, transparent);
+		background: color-mix(in oklab, oklch(0.7 0.13 155) 8%, var(--btn-regular-bg));
+	}
+
+	.auth-session > :global(svg) {
+		font-size: 1.25rem;
+		color: var(--primary);
+	}
+
+	.auth-copy,
+	.auth-copy strong,
+	.auth-copy small {
+		display: block;
+		min-width: 0;
+	}
+
+	.auth-copy strong {
+		overflow: hidden;
+		font-size: 0.72rem;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.auth-copy small {
+		margin-top: 0.12rem;
+		font-size: 0.62rem;
+		color: color-mix(in oklab, currentColor 46%, transparent);
+	}
+
+	.auth-session .auth-action {
+		width: auto;
+		min-width: 2.8rem;
+		padding: 0 0.55rem;
+		font-size: 0.66rem;
+		font-weight: 700;
+		color: var(--primary);
+	}
+
 	.publish-header > span {
 		font-family: "JetBrains Mono Variable", monospace;
 		font-size: 0.78rem;
@@ -1446,7 +1764,8 @@ onMount(() => {
 
 		.studio-brand span,
 		.topbar-actions .button-quiet:not(.icon-button),
-		.topbar-actions .button-primary span {
+		.topbar-actions .button-primary span,
+		.topbar-user > span {
 			display: none;
 		}
 
