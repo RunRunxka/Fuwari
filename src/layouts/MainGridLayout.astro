@@ -404,6 +404,13 @@ const mainPanelTop = siteConfig.banner.enable
   transform: translateX(1.5rem);
   background: white;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  #banner-wrapper,
+  #banner {
+    transition-duration: 0s !important;
+  }
+}
 </style>
 <script src="../scripts/scroll-animations.ts"></script>
 </Layout>

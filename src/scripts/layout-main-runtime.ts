@@ -76,27 +76,34 @@ function showBanner() {
 		return;
 	}
 
-	// Ken Burns: fade in + subtle continuous zoom
-	gsap.set(img, { scale: 1.08, willChange: "transform" });
-	gsap.set(banner, { opacity: 0 });
-	gsap.to(banner, { opacity: 1, duration: 1.2, ease: "power1.out" });
-	gsap.to(img, {
-		scale: 1.0,
-		duration: 6,
-		ease: "none",
-		repeat: -1,
-		yoyo: true,
+	const bannerMedia = gsap.matchMedia();
+	bannerMedia.add("(prefers-reduced-motion: reduce)", () => {
+		gsap.set(banner, { opacity: 1 });
+		gsap.set(img, { scale: 1, clearProps: "willChange" });
 	});
+	bannerMedia.add("(prefers-reduced-motion: no-preference)", () => {
+		// Ken Burns: fade in + subtle continuous zoom
+		gsap.set(img, { scale: 1.08, willChange: "transform" });
+		gsap.set(banner, { opacity: 0 });
+		gsap.to(banner, { opacity: 1, duration: 1.2, ease: "power1.out" });
+		gsap.to(img, {
+			scale: 1.0,
+			duration: 6,
+			ease: "none",
+			repeat: -1,
+			yoyo: true,
+		});
 
-	// Parallax: scroll down zooms banner out
-	gsap.to(img, {
-		scale: 1.12,
-		scrollTrigger: {
-			trigger: banner,
-			start: "top top",
-			end: "bottom top",
-			scrub: 0.5,
-		},
+		// Parallax: scroll down zooms banner out
+		gsap.to(img, {
+			scale: 1.12,
+			scrollTrigger: {
+				trigger: banner,
+				start: "top top",
+				end: "bottom top",
+				scrub: 0.5,
+			},
+		});
 	});
 }
 
