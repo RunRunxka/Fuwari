@@ -124,6 +124,16 @@ jobs:
 
             const files = await listAllFiles()
 
+            const touchesManagedData = files.some(
+              (file) =>
+                file.filename.startsWith('src/data/friends/') ||
+                file.filename.startsWith('src/data/sponsors/')
+            )
+            if (!touchesManagedData) {
+              core.info('PR does not touch friend or sponsor data; skip auto-pr triage')
+              return
+            }
+
             if (files.length !== 1) {
               await createComment('PR 必须仅包含一个文件变更。')
               return

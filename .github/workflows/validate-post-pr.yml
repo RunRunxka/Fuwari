@@ -1,0 +1,35 @@
+name: Validate Post PR
+
+on:
+  pull_request:
+    paths:
+      - "src/content/posts/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-post-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PUBLIC_ADMIN_API_BASE_URL: ${{ vars.PUBLIC_ADMIN_API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm update-diff
+      - run: pnpm build
