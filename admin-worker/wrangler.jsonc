@@ -1,0 +1,22 @@
+{
+	"name": "fuwari-studio-api",
+	"main": "./index.ts",
+	"compatibility_date": "2026-07-17",
+	"vars": {
+		"FRONTEND_ORIGIN": "https://runrunxka.xyz",
+		"GITHUB_OWNER": "RunRunxka",
+		"GITHUB_REPO": "Fuwari",
+		"GITHUB_BASE_BRANCH": "main"
+	},
+	"secrets": {
+		"required": [
+			"GITHUB_APP_ID",
+			"GITHUB_APP_INSTALLATION_ID",
+			"GITHUB_APP_PRIVATE_KEY",
+			"GITHUB_APP_CLIENT_ID",
+			"GITHUB_APP_CLIENT_SECRET",
+			"ADMIN_GITHUB_LOGINS",
+			"SESSION_SECRET"
+		]
+	}
+}

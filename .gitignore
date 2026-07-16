@@ -17,6 +17,8 @@ pnpm-debug.log*
 .env
 .env.production
 .env.local
+.dev.vars*
+!.dev.vars.example
 .translation_cache.json
 
 # macOS-specific files
