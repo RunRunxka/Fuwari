@@ -86,6 +86,7 @@ let noticeTween: ReturnType<typeof gsap.fromTo> | undefined;
 
 $: normalizedQuery = query.trim().toLowerCase();
 $: normalizedApiBase = apiBase.replace(/\/+$/, "");
+$: isLocalOnlyPost = !currentPost.sourceSlug;
 $: filteredPosts = workspacePosts.filter((post) => {
 	const matchesFilter =
 		filter === "all" ||
@@ -380,6 +381,40 @@ function resetCurrentPost(): void {
 	publishResult = null;
 	syncPostToWorkspace();
 	showNotice("已恢复为仓库中的文章版本。");
+}
+
+async function deleteLocalDraft(): Promise<void> {
+	if (!isLocalOnlyPost) {
+		showNotice("仓库文章不能在这里删除，请使用“恢复仓库版本”清除本地修改。");
+		return;
+	}
+	const title = currentPost.title.trim() || "未命名文章";
+	if (
+		!window.confirm(
+			`确定删除本地草稿《${title}》吗？此操作只清除当前浏览器中的草稿，且无法撤销。`,
+		)
+	) {
+		return;
+	}
+	if (saveTimer) {
+		clearTimeout(saveTimer);
+		saveTimer = undefined;
+	}
+	localStorage.removeItem(getStorageKey(currentPost.id));
+	workspacePosts = workspacePosts.filter((post) => post.id !== currentPost.id);
+	const nextPost = workspacePosts[0];
+	if (nextPost) {
+		await selectPost(nextPost);
+	} else {
+		currentPost = createEmptyPost();
+		selectedId = "";
+		tagsInput = "";
+		savedAt = "";
+		saveState = "idle";
+		isDirty = false;
+		publishResult = null;
+	}
+	showNotice(`已删除本地草稿《${title}》。`);
 }
 
 function downloadMarkdown(): void {
@@ -783,6 +818,12 @@ onMount(() => {
 					<h2>写作</h2>
 				</div>
 				<div class="editor-heading-actions">
+					{#if isLocalOnlyPost}
+						<button class="studio-button button-danger" type="button" onclick={deleteLocalDraft}>
+							<Icon icon="material-symbols:delete-outline-rounded" />
+							删除草稿
+						</button>
+					{/if}
 					<button class="studio-button button-quiet" type="button" onclick={resetCurrentPost}>
 						<Icon icon="material-symbols:restore-rounded" />
 						恢复仓库版本
@@ -1115,6 +1156,16 @@ onMount(() => {
 	.button-primary {
 		background: var(--primary);
 		color: color-mix(in oklab, var(--deep-text) 86%, black);
+	}
+
+	.button-danger {
+		border-color: color-mix(in oklab, oklch(0.62 0.2 25) 32%, transparent);
+		background: color-mix(in oklab, oklch(0.62 0.2 25) 10%, var(--btn-regular-bg));
+		color: color-mix(in oklab, oklch(0.62 0.2 25) 82%, currentColor);
+	}
+
+	.button-danger:hover {
+		background: color-mix(in oklab, oklch(0.62 0.2 25) 16%, var(--btn-regular-bg-hover));
 	}
 
 	.studio-button:focus-visible,
