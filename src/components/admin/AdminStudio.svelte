@@ -75,6 +75,7 @@ let savedAt = "";
 let notice = "";
 let publishResult: AdminPublishResult | null = null;
 let isPublishing = false;
+let isDeleting = false;
 let authState: AuthState = apiBase ? "checking" : "disabled";
 let authUser: AdminSessionUser | null = null;
 let sessionToken = "";
@@ -152,7 +153,10 @@ $: publishActionIcon = isPublishing
 			? "material-symbols:publish-rounded"
 			: "fa6-brands:github";
 $: publishActionDisabled =
-	isPublishing || authState === "checking" || Boolean(publishResult);
+	isPublishing ||
+	isDeleting ||
+	authState === "checking" ||
+	Boolean(publishResult);
 $: sessionExpiryLabel = sessionExpiresAt
 	? new Intl.DateTimeFormat("zh-CN", {
 			hour: "2-digit",
@@ -415,6 +419,73 @@ async function deleteLocalDraft(): Promise<void> {
 		publishResult = null;
 	}
 	showNotice(`已删除本地草稿《${title}》。`);
+}
+
+async function deleteRepositoryPost(): Promise<void> {
+	const sourceSlug = currentPost.sourceSlug;
+	if (!sourceSlug) {
+		showNotice("新建草稿尚未进入仓库，请使用“删除草稿”。");
+		return;
+	}
+	if (!normalizedApiBase) {
+		showNotice("GitHub 发布服务尚未配置，无法创建删除 PR。");
+		return;
+	}
+	if (!sessionToken || authState !== "authenticated") {
+		startGitHubLogin();
+		return;
+	}
+	const postId = currentPost.id;
+	const title = currentPost.title.trim() || sourceSlug;
+	if (
+		!window.confirm(
+			`确定为仓库文章《${title}》创建删除 Draft PR 吗？文章不会立即下线，本地未发布修改不会包含在删除 PR 中。`,
+		)
+	) {
+		return;
+	}
+
+	isDeleting = true;
+	try {
+		const response = await fetch(
+			`${normalizedApiBase}/api/posts/${encodeURIComponent(sourceSlug)}`,
+			{
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${sessionToken}` },
+			},
+		);
+		const result = (await response.json().catch(() => null)) as
+			| (AdminPublishResult & { error?: string })
+			| null;
+		if (!response.ok) {
+			if (response.status === 401) {
+				clearAdminSession();
+				authState = "anonymous";
+			}
+			throw new Error(result?.error || `删除请求失败（${response.status}）`);
+		}
+		if (!result?.pullRequestUrl) throw new Error("删除服务返回结果不完整");
+		if (saveTimer) {
+			clearTimeout(saveTimer);
+			saveTimer = undefined;
+		}
+		try {
+			localStorage.removeItem(getStorageKey(postId));
+		} catch {
+			// The GitHub PR is authoritative even when browser storage is unavailable.
+		}
+		if (currentPost.id === postId) {
+			isDirty = false;
+			saveState = "idle";
+			savedAt = "";
+			publishResult = result;
+		}
+		showNotice("删除文章的 Draft PR 已创建，请检查差异后再人工合并。");
+	} catch (error) {
+		showNotice(error instanceof Error ? error.message : "删除请求失败");
+	} finally {
+		isDeleting = false;
+	}
 }
 
 function downloadMarkdown(): void {
@@ -823,6 +894,16 @@ onMount(() => {
 							<Icon icon="material-symbols:delete-outline-rounded" />
 							删除草稿
 						</button>
+					{:else}
+						<button
+							class="studio-button button-danger"
+							type="button"
+							disabled={isDeleting || isPublishing || Boolean(publishResult)}
+							onclick={deleteRepositoryPost}
+						>
+							<Icon icon={isDeleting ? "material-symbols:progress-activity" : "material-symbols:delete-outline-rounded"} />
+							{isDeleting ? "正在创建 PR" : "删除文章"}
+						</button>
 					{/if}
 					<button class="studio-button button-quiet" type="button" onclick={resetCurrentPost}>
 						<Icon icon="material-symbols:restore-rounded" />
@@ -976,7 +1057,7 @@ onMount(() => {
 
 				{#if publishResult}
 					<a class="studio-button button-primary publish-link" href={publishResult.pullRequestUrl} target="_blank" rel="noreferrer">
-						查看发布 PR
+						查看变更 PR
 						<Icon icon="material-symbols:arrow-outward-rounded" />
 					</a>
 				{/if}

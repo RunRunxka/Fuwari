@@ -1,4 +1,4 @@
-import { GitHubApiError, publishPost } from "./github";
+import { deletePost, GitHubApiError, publishPost } from "./github";
 import {
 	constantTimeEqual,
 	createRandomToken,
@@ -43,7 +43,7 @@ function withCors(headers: Headers, request: Request, env: Env): Headers {
 	if (origin === env.FRONTEND_ORIGIN) {
 		headers.set("Access-Control-Allow-Origin", origin);
 		headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
-		headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+		headers.set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
 		headers.set("Vary", "Origin");
 	}
 	return headers;
@@ -333,6 +333,16 @@ async function route(request: Request, env: Env): Promise<Response> {
 			payload.content,
 			payload.sourceSlug,
 		);
+		return jsonResponse(result, 201, request, env);
+	}
+
+	const deleteMatch = url.pathname.match(/^\/api\/posts\/([^/]+)$/);
+	if (request.method === "DELETE" && deleteMatch) {
+		validateEnvironment(env);
+		const session = await requireSession(request, env);
+		const slug = decodeURIComponent(deleteMatch[1]);
+		validateSlug(slug, "文章路径");
+		const result = await deletePost(env, session, slug);
 		return jsonResponse(result, 201, request, env);
 	}
 

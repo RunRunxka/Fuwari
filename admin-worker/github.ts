@@ -27,6 +27,12 @@ interface PullRequest {
 	html_url: string;
 }
 
+interface RepositoryContent {
+	type: string;
+	encoding: string;
+	content: string;
+}
+
 export class GitHubApiError extends Error {
 	constructor(
 		message: string,
@@ -201,6 +207,35 @@ async function pathExists(
 	}
 }
 
+async function readPostContent(
+	env: Env,
+	token: string,
+	slug: string,
+	ref: string,
+): Promise<string> {
+	let file: RepositoryContent;
+	try {
+		file = await githubRequest<RepositoryContent>(
+			`/repos/${encodeURIComponent(env.GITHUB_OWNER)}/${encodeURIComponent(env.GITHUB_REPO)}/contents/${postPath(slug)}?ref=${encodeURIComponent(ref)}`,
+			token,
+		);
+	} catch (error) {
+		if (error instanceof GitHubApiError && error.status === 404) {
+			throw new GitHubApiError(`仓库中不存在文章：${slug}`, 409);
+		}
+		throw error;
+	}
+	if (file.type !== "file" || file.encoding !== "base64" || !file.content) {
+		throw new GitHubApiError(`无法读取仓库文章：${slug}`, 409);
+	}
+	const binary = atob(file.content.replace(/\s+/g, ""));
+	const bytes = new Uint8Array(binary.length);
+	for (let index = 0; index < binary.length; index += 1) {
+		bytes[index] = binary.charCodeAt(index);
+	}
+	return new TextDecoder().decode(bytes);
+}
+
 export function extractPostTitle(content: string): string {
 	if (!content.startsWith("---\n")) {
 		throw new GitHubApiError("文章必须以 YAML frontmatter 开始", 400);
@@ -222,6 +257,54 @@ export function extractPostTitle(content: string): string {
 		return title.replace(/\s+/g, " ").trim().slice(0, 160);
 	} catch {
 		throw new GitHubApiError("文章 title 必须是有效的 JSON 字符串", 400);
+	}
+}
+
+async function createDraftPullRequest(
+	env: Env,
+	token: string,
+	baseBranch: string,
+	branch: string,
+	commitSha: string,
+	title: string,
+	body: string,
+): Promise<PullRequest> {
+	const owner = encodeURIComponent(env.GITHUB_OWNER);
+	const repo = encodeURIComponent(env.GITHUB_REPO);
+	await githubRequest<GitReference>(`/repos/${owner}/${repo}/git/refs`, token, {
+		method: "POST",
+		body: JSON.stringify({
+			ref: `refs/heads/${branch}`,
+			sha: commitSha,
+		}),
+	});
+
+	try {
+		return await githubRequest<PullRequest>(
+			`/repos/${owner}/${repo}/pulls`,
+			token,
+			{
+				method: "POST",
+				body: JSON.stringify({
+					title,
+					head: branch,
+					base: baseBranch,
+					draft: true,
+					body,
+				}),
+			},
+		);
+	} catch (error) {
+		try {
+			await githubRequest<void>(
+				`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
+				token,
+				{ method: "DELETE" },
+			);
+		} catch {
+			// Leave the exact recovery branch in place if GitHub rejects cleanup.
+		}
+		throw error;
 	}
 }
 
@@ -321,51 +404,101 @@ export async function publishPost(
 	);
 
 	const branch = `studio/${slug}-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 6)}`;
-	await githubRequest<GitReference>(`/repos/${owner}/${repo}/git/refs`, token, {
-		method: "POST",
-		body: JSON.stringify({
-			ref: `refs/heads/${branch}`,
-			sha: commit.sha,
-		}),
-	});
-
 	const action = isNewPost ? "发布" : "更新";
-	let pullRequest: PullRequest;
-	try {
-		pullRequest = await githubRequest<PullRequest>(
-			`/repos/${owner}/${repo}/pulls`,
-			token,
-			{
-				method: "POST",
-				body: JSON.stringify({
-					title: `${action}文章《${title}》`,
-					head: branch,
-					base: baseBranch,
-					draft: true,
-					body: [
-						"## Fuwari Studio 发布请求",
-						"",
-						`- 操作者：@${actor.sub}`,
-						`- 文章：\`${postPath(slug)}\``,
-						`- 类型：${isNewPost ? "新文章" : sourceSlug === slug ? "更新文章" : `重命名（${sourceSlug} → ${slug}）`}`,
-						"",
-						"> 此 PR 不会自动合并。请确认预览和 Actions 检查后再人工合并。",
-					].join("\n"),
-				}),
-			},
-		);
-	} catch (error) {
-		try {
-			await githubRequest<void>(
-				`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
-				token,
-				{ method: "DELETE" },
-			);
-		} catch {
-			// Leave the exact recovery branch in place if GitHub rejects cleanup.
-		}
-		throw error;
-	}
+	const pullRequest = await createDraftPullRequest(
+		env,
+		token,
+		baseBranch,
+		branch,
+		commit.sha,
+		`${action}文章《${title}》`,
+		[
+			"## Fuwari Studio 发布请求",
+			"",
+			`- 操作者：@${actor.sub}`,
+			`- 文章：\`${postPath(slug)}\``,
+			`- 类型：${isNewPost ? "新文章" : sourceSlug === slug ? "更新文章" : `重命名（${sourceSlug} → ${slug}）`}`,
+			"",
+			"> 此 PR 不会自动合并。请确认预览和 Actions 检查后再人工合并。",
+		].join("\n"),
+	);
+
+	return {
+		pullRequestUrl: pullRequest.html_url,
+		branch,
+		commit: commit.sha,
+		pullRequestNumber: pullRequest.number,
+	};
+}
+
+export async function deletePost(
+	env: Env,
+	actor: SessionClaims,
+	slug: string,
+): Promise<PublishResult> {
+	const token = await getInstallationToken(env);
+	const owner = encodeURIComponent(env.GITHUB_OWNER);
+	const repo = encodeURIComponent(env.GITHUB_REPO);
+	const baseBranch = env.GITHUB_BASE_BRANCH || "main";
+	const content = await readPostContent(env, token, slug, baseBranch);
+	const title = extractPostTitle(content);
+
+	const baseReference = await githubRequest<GitReference>(
+		`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(baseBranch)}`,
+		token,
+	);
+	const baseCommit = await githubRequest<GitCommit>(
+		`/repos/${owner}/${repo}/git/commits/${baseReference.object.sha}`,
+		token,
+	);
+	const tree = await githubRequest<GitObject>(
+		`/repos/${owner}/${repo}/git/trees`,
+		token,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				base_tree: baseCommit.tree.sha,
+				tree: [
+					{
+						path: postPath(slug),
+						mode: "100644",
+						type: "blob",
+						sha: null,
+					},
+				],
+			}),
+		},
+	);
+	const commit = await githubRequest<GitCommit>(
+		`/repos/${owner}/${repo}/git/commits`,
+		token,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				message: `posts: 删除文章《${title}》`,
+				tree: tree.sha,
+				parents: [baseCommit.sha],
+			}),
+		},
+	);
+	const branch = `studio/delete-${slug}-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 6)}`;
+	const pullRequest = await createDraftPullRequest(
+		env,
+		token,
+		baseBranch,
+		branch,
+		commit.sha,
+		`删除文章《${title}》`,
+		[
+			"## Fuwari Studio 删除请求",
+			"",
+			`- 操作者：@${actor.sub}`,
+			`- 文章：\`${postPath(slug)}\``,
+			"- 类型：删除文章",
+			"",
+			"> 此 PR 不会自动合并。请确认删除差异和 Actions 检查后再人工合并。",
+		].join("\n"),
+	);
 
 	return {
 		pullRequestUrl: pullRequest.html_url,

@@ -1,6 +1,6 @@
 # Fuwari Studio 发布服务
 
-这是管理端的独立 Cloudflare Worker。它使用 GitHub OAuth 确认操作者身份，再以 GitHub App installation token 创建文章提交和草稿 PR。
+这是管理端的独立 Cloudflare Worker。它使用 GitHub OAuth 确认操作者身份，再以 GitHub App installation token 创建文章发布、更新或删除提交及草稿 PR。
 
 浏览器只能得到两小时有效的 Fuwari Studio 会话，不会接触 GitHub PAT、App 私钥或 installation token。
 
@@ -60,5 +60,5 @@ https://fuwari-studio-api.<account>.workers.dev
 - 管理会话使用 HMAC 签名并在两小时后过期。
 - GitHub App token 被限制到单个仓库及 Contents/Pull requests 权限。
 - 文章请求限制为 1 MB，文件路径只能位于 `src/content/posts`。
-- 发布只创建唯一分支和草稿 PR，不会直接写入或合并 `main`。
+- 发布、更新和删除只创建唯一分支和草稿 PR，不会直接写入或合并 `main`。
 - 如果 PR 创建失败，Worker 会尝试删除刚创建的临时分支，避免留下无主分支。
