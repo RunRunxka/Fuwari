@@ -1,0 +1,31 @@
+---
+import { Icon } from "astro-icon/components";
+
+const coreSymbols = [
+	"material-symbols:schedule-outline-rounded",
+	"material-symbols:edit-calendar-outline-rounded",
+	"material-symbols:visibility-outline-rounded",
+	"material-symbols:label-outline-rounded",
+	"material-symbols:sort-by-alpha-rounded",
+	"material-symbols:arrow-downward-rounded",
+	"material-symbols:chevron-left-rounded",
+	"material-symbols:chevron-right-rounded",
+	"material-symbols:more-horiz",
+];
+---
+
+<div
+	id="global-svg-symbol-source"
+	aria-hidden="true"
+	style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;"
+>
+	{coreSymbols.map((name) => (
+		<Icon name={name} aria-hidden="true" focusable="false" />
+	))}
+	<svg
+		id="runtime-svg-symbol-sprite"
+		aria-hidden="true"
+		width="0"
+		height="0"
+	></svg>
+</div>

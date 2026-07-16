@@ -21,6 +21,10 @@ import {
 	setThemeMode,
 } from "../utils/setting-utils";
 import { url, pathsEqual } from "../utils/url-utils";
+import {
+	repairSvgSymbols,
+	scheduleSvgSymbolRepair,
+} from "./svg-symbols";
 
 const bannerEnabled = !!document.getElementById("banner-wrapper");
 
@@ -167,6 +171,7 @@ function init() {
 
 init();
 bindPostInlineDiff();
+repairSvgSymbols();
 
 // DOM 事件委托：主题切换（兜底 Svelte client:only 水合延迟）
 document.addEventListener("click", (e) => {
@@ -185,22 +190,6 @@ document.addEventListener("click", (e) => {
 });
 
 const setup = () => {
-	const SORT_PATHS = [
-		"/",
-		"/date-asc/",
-		"/date-desc/",
-		"/alpha-asc/",
-		"/alpha-desc/",
-	];
-
-	const isSortPath = (pathname: string): boolean => {
-		const clean = pathname.replace(/\/+$/, "") || "/";
-		return SORT_PATHS.some((p) => {
-			const cleanP = p.replace(/\/+$/, "") || "/";
-			return clean === cleanP || clean.startsWith(cleanP + "/");
-		});
-	};
-
 	window.swup.hooks.on("link:click", (visit: { el?: HTMLElement }) => {
 		document.documentElement.style.setProperty("--content-delay", "0ms");
 
@@ -221,7 +210,7 @@ const setup = () => {
 	});
 	window.swup.hooks.on(
 		"visit:start",
-		(visit: { to: { url: string }; containers?: string[] }) => {
+		(visit: { to: { url: string } }) => {
 			const bodyElement = document.querySelector("body");
 			const targetIsHome = pathsEqual(visit.to.url, url("/"));
 
@@ -233,23 +222,6 @@ const setup = () => {
 			const toc = document.getElementById("toc-wrapper");
 			if (toc) {
 				toc.classList.add("toc-not-ready");
-			}
-
-			// Fragment-like behavior: if navigating between sort pages, only refresh article list
-			const currentPath = window.location.pathname;
-			const targetPath = new URL(visit.to.url, window.location.origin).pathname;
-			const sortContainer = document.getElementById("sort-container");
-
-			if (isSortPath(currentPath) && isSortPath(targetPath)) {
-				// Navigating between sort pages: only refresh article list
-				visit.containers = ["#swup-container"];
-				// Prevent sort container from animating out
-				if (sortContainer) {
-					sortContainer.classList.add("sort-keep");
-				}
-			} else if (sortContainer) {
-				// Navigating away or to sort page: let sort container animate normally
-				sortContainer.classList.remove("sort-keep");
 			}
 		},
 	);
@@ -276,31 +248,16 @@ const setup = () => {
 		scrollFunction();
 		loadGiscus();
 
-		// 修复 Swup 过渡后 SVG 图标消失 & 计数器归零
-		requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-				document.querySelectorAll("svg use").forEach((use) => {
-					const href = use.getAttribute("href");
-					if (href) {
-						use.removeAttribute("href");
-						use.setAttribute("href", href);
-					}
-				});
-				window.dispatchEvent(new CustomEvent("content:replace"));
-				});
-			})
+		// Swup 替换完成后恢复缺失的 symbol，再刷新依赖新内容的组件。
+		scheduleSvgSymbolRepair(() => {
+			window.dispatchEvent(new CustomEvent("content:replace"));
+		});
 	});
 	window.swup.hooks.on("visit:end", () => {
 		requestAnimationFrame(() => {
 			const toc = document.getElementById("toc-wrapper");
 			if (toc) {
 				toc.classList.remove("toc-not-ready");
-			}
-
-			// Clean up sort-keep class
-			const sortContainer = document.getElementById("sort-container");
-			if (sortContainer) {
-				sortContainer.classList.remove("sort-keep");
 			}
 
 			scrollFunction();
@@ -421,18 +378,9 @@ window.addEventListener("pageshow", (event) => {
 				if (el) el.remove();
 			}
 		}
-		// 双层 rAF 确保 astro-icon 的 SVG <use> 已渲染完成
-		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				document.querySelectorAll("svg use").forEach((use) => {
-					const href = use.getAttribute("href");
-					if (href) {
-						use.removeAttribute("href");
-						use.setAttribute("href", href);
-					}
-				});
-				window.dispatchEvent(new CustomEvent("content:replace"));
-			});
+		// bfcache 恢复后重新校验全部 <use>，并补回已丢失的 symbol。
+		scheduleSvgSymbolRepair(() => {
+			window.dispatchEvent(new CustomEvent("content:replace"));
 		});
 	}
 });

@@ -13,6 +13,7 @@ import { profileConfig, siteConfig } from "@/config";
 import ConfigCarrier from "@components/ConfigCarrier.astro";
 import BodyThirdPartyScripts from "@components/layout/BodyThirdPartyScripts.astro";
 import DashLoaderScript from "@components/layout/DashLoaderScript.astro";
+import GlobalSvgSymbolSprite from "@components/layout/GlobalSvgSymbolSprite.astro";
 import NewPostNotification from "@components/widget/NewPostNotification.astro";
 import {
 	BANNER_HEIGHT,
@@ -210,6 +211,7 @@ const bannerOffset = bannerOffsetByPosition[siteConfig.banner.position || "cente
 	</head>
 
 	<body class:list={["min-h-screen transition", {"lg:is-home": isHomePage, "enable-banner": enableBanner}]}>
+		<GlobalSvgSymbolSprite />
 		<div id="site-bg-layer" aria-hidden="true">
 			<div id="site-bg-pane" class="site-bg-pane"></div>
 		</div>
