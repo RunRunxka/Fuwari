@@ -11,9 +11,6 @@ permissions:
   pull-requests: write
   issues: write
 
-env:
-  PAT: ${{ secrets.PAT }}
-
 concurrency:
   group: auto-pr-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
@@ -519,14 +516,6 @@ jobs:
 
             await setLabels({ addLabels: addReach, removeLabels: removeReach, skipIfSame: true })
 
-            // Auto merge if it is an edit (modified) and all checks pass
-            if (relevant.length === 1 && relevant[0].status === 'modified' && allOk) {
-               try {
-                  await github.rest.pulls.merge({ owner, repo, pull_number, merge_method: 'squash' })
-                  return
-                } catch {}
-            }
-
             const existingLabelNames = new Set((context.payload.pull_request.labels || []).map((l) => l.name))
             core.info(`bidir: event.action=${context.payload.action || ''}`)
             core.info(`bidir: siteBase=${siteBase || ''}`)
@@ -661,17 +650,19 @@ jobs:
                   await createComment(`${MSG.MERGE_FAIL}${e?.message || e}`)
                   return
                 }
+              } else if (context.payload.action === 'opened') {
+                await createComment('赞助记录已通过格式与链接检查。请维护者核验付款凭证后回复“准备完毕”，自动流程不会在无人审批时合并赞助记录。')
               }
 
   verify_and_merge:
-    if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '准备完毕' }}
+    if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '准备完毕' && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Auto-merge
         uses: actions/github-script@v7
         with:
-          github-token: ${{ env.PAT }}
+          github-token: ${{ github.token }}
           script: |
             const owner = context.repo.owner
             const repo = context.repo.repo
