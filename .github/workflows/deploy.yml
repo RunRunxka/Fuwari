@@ -19,7 +19,6 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: node scripts/fetch-pageviews.js || true  # 拉取最新统计（失败不影响构建）
       - run: pnpm build
 
       - name: Deploy to server
