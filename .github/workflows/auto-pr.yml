@@ -225,19 +225,161 @@ jobs:
 
             const siteBase = await getSiteBase()
 
-            // Reusable verification logic from link-utils.js (simplified for github-script)
-            async function checkUrlReachability(url) {
+            const dns = require('node:dns').promises
+            const net = require('node:net')
+            const MAX_REDIRECTS = 5
+            const MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+            const BLOCKED_IPV4_CIDRS = [
+              ['0.0.0.0', 8],
+              ['10.0.0.0', 8],
+              ['100.64.0.0', 10],
+              ['127.0.0.0', 8],
+              ['169.254.0.0', 16],
+              ['172.16.0.0', 12],
+              ['192.0.0.0', 24],
+              ['192.0.2.0', 24],
+              ['192.168.0.0', 16],
+              ['198.18.0.0', 15],
+              ['198.51.100.0', 24],
+              ['203.0.113.0', 24],
+              ['224.0.0.0', 4],
+              ['240.0.0.0', 4],
+            ]
+
+            function ipv4ToNumber(address) {
+              const octets = address.split('.').map(Number)
+              if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return null
+              return octets.reduce((value, part) => value * 256 + part, 0)
+            }
+
+            function isIpv4InCidr(address, base, prefix) {
+              const value = ipv4ToNumber(address)
+              const baseValue = ipv4ToNumber(base)
+              if (value === null || baseValue === null) return true
+              const blockSize = 2 ** (32 - prefix)
+              return Math.floor(value / blockSize) === Math.floor(baseValue / blockSize)
+            }
+
+            function parseIpv6(address) {
+              let value = address.toLowerCase().split('%')[0]
+              if (value.includes('.')) {
+                const lastColon = value.lastIndexOf(':')
+                const ipv4 = ipv4ToNumber(value.slice(lastColon + 1))
+                if (ipv4 === null) return null
+                value = `${value.slice(0, lastColon)}:${Math.floor(ipv4 / 65536).toString(16)}:${(ipv4 % 65536).toString(16)}`
+              }
+
+              const halves = value.split('::')
+              if (halves.length > 2) return null
+              const left = halves[0] ? halves[0].split(':') : []
+              const right = halves[1] ? halves[1].split(':') : []
+              const missing = 8 - left.length - right.length
+              if ((halves.length === 1 && missing !== 0) || (halves.length === 2 && missing < 1)) return null
+              const rawParts = halves.length === 2 ? [...left, ...Array(missing).fill('0'), ...right] : left
+              const parts = rawParts.map((part) => Number.parseInt(part, 16))
+              if (parts.length !== 8 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 0xffff)) return null
+              return parts
+            }
+
+            function isBlockedAddress(address) {
+              const normalized = address.replace(/^\[|\]$/g, '')
+              if (net.isIPv4(normalized)) {
+                return BLOCKED_IPV4_CIDRS.some(([base, prefix]) => isIpv4InCidr(normalized, base, prefix))
+              }
+              if (!net.isIPv6(normalized)) return true
+
+              const parts = parseIpv6(normalized)
+              if (!parts) return true
+              const first = parts[0]
+              const isUnspecified = parts.every((part) => part === 0)
+              const isLoopback = parts.slice(0, 7).every((part) => part === 0) && parts[7] === 1
+              if (isUnspecified || isLoopback) return true
+              if ((first & 0xfe00) === 0xfc00) return true
+              if ((first & 0xffc0) === 0xfe80 || (first & 0xffc0) === 0xfec0) return true
+              if ((first & 0xff00) === 0xff00) return true
+              if (parts[0] === 0x2001 && parts[1] === 0x0db8) return true
+
+              const isCompatible = parts.slice(0, 6).every((part) => part === 0)
+              const isMapped = parts.slice(0, 5).every((part) => part === 0) && parts[5] === 0xffff
+              if (isCompatible || isMapped) {
+                const ipv4 = `${parts[6] >> 8}.${parts[6] & 0xff}.${parts[7] >> 8}.${parts[7] & 0xff}`
+                return isBlockedAddress(ipv4)
+              }
+              return false
+            }
+
+            async function validatePublicHttpUrl(rawUrl) {
+              const parsed = new URL(rawUrl)
+              if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('Only http/https URLs are allowed')
+              if (parsed.username || parsed.password) throw new Error('URLs with credentials are not allowed')
+
+              const hostname = parsed.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase()
+              if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') || hostname.endsWith('.internal') || hostname.endsWith('.home.arpa')) {
+                throw new Error('Local hostnames are not allowed')
+              }
+
+              const addresses = net.isIP(hostname)
+                ? [{ address: hostname }]
+                : await dns.lookup(hostname, { all: true, verbatim: true })
+              if (!addresses.length || addresses.some(({ address }) => isBlockedAddress(address))) {
+                throw new Error('Private, link-local, or reserved addresses are not allowed')
+              }
+              return parsed
+            }
+
+            async function readTextWithLimit(response) {
+              const contentLength = Number(response.headers.get('content-length') || 0)
+              if (contentLength > MAX_RESPONSE_BYTES) throw new Error('Response body is too large')
+              if (!response.body) return ''
+
+              const reader = response.body.getReader()
+              const chunks = []
+              let total = 0
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                total += value.byteLength
+                if (total > MAX_RESPONSE_BYTES) {
+                  await reader.cancel()
+                  throw new Error('Response body is too large')
+                }
+                chunks.push(value)
+              }
+
+              const merged = new Uint8Array(total)
+              let offset = 0
+              for (const chunk of chunks) {
+                merged.set(chunk, offset)
+                offset += chunk.byteLength
+              }
+              return new TextDecoder().decode(merged)
+            }
+
+            async function checkUrlReachability(rawUrl) {
               const controller = new AbortController()
               const timer = setTimeout(() => controller.abort(), 10000)
               try {
-                const res = await fetch(url, {
-                  method: 'GET',
-                  redirect: 'follow',
-                  headers: { 'user-agent': 'fuwari-auto-pr/1.0 (+github actions)', accept: 'text/html,*/*;q=0.8' },
-                  signal: controller.signal,
-                })
-                const body = res.ok ? await res.text() : ''
-                return { ok: res.ok, status: res.status, body, url: res.url }
+                let current = await validatePublicHttpUrl(rawUrl)
+                for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
+                  const res = await fetch(current, {
+                    method: 'GET',
+                    redirect: 'manual',
+                    headers: { 'user-agent': 'fuwari-auto-pr/1.0 (+github actions)', accept: 'text/html,application/json,image/*,*/*;q=0.8' },
+                    signal: controller.signal,
+                  })
+                  const location = res.headers.get('location')
+                  if (res.status >= 300 && res.status < 400 && location) {
+                    if (redirectCount === MAX_REDIRECTS) throw new Error('Too many redirects')
+                    current = await validatePublicHttpUrl(new URL(location, current).toString())
+                    continue
+                  }
+
+                  const contentType = res.headers.get('content-type') || ''
+                  const shouldReadBody = res.ok && (!contentType || contentType.includes('text/') || contentType.includes('json'))
+                  const body = shouldReadBody ? await readTextWithLimit(res) : ''
+                  return { ok: res.ok, status: res.status, body, url: current.toString(), contentType }
+                }
+                return { ok: false, error: 'Too many redirects' }
               } catch (e) {
                 return { ok: false, error: e?.message || String(e) }
               } finally {
@@ -270,40 +412,6 @@ jobs:
                 return new URL(u).toString()
               } catch {
                 return null
-              }
-            }
-
-            async function checkUrl(url, { timeoutMs }) {
-              const controller = new AbortController()
-              const timer = setTimeout(() => controller.abort(), timeoutMs)
-              try {
-                // SSRF Protection
-                try {
-                  const u = new URL(url)
-                  if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Invalid protocol')
-                  const h = u.hostname
-                  if (h === 'localhost' || h === '127.0.0.1' || h === '::1') throw new Error('Localhost not allowed')
-                  if (/^10\./.test(h)) throw new Error('Private IP not allowed')
-                  if (/^192\.168\./.test(h)) throw new Error('Private IP not allowed')
-                  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(h)) throw new Error('Private IP not allowed')
-                } catch (e) {
-                  return { ok: false, error: e.message }
-                }
-
-                const res = await fetch(url, {
-                  method: 'GET',
-                  redirect: 'follow',
-                  headers: {
-                    'user-agent': 'fuwari-auto-pr/1.0 (+github actions)',
-                    accept: 'text/html,application/json,image/*,*/*;q=0.8',
-                  },
-                  signal: controller.signal,
-                })
-                return { ok: res.status >= 200 && res.status < 400, status: res.status }
-              } catch (e) {
-                return { ok: false, error: e?.message || String(e) }
-              } finally {
-                clearTimeout(timer)
               }
             }
 
@@ -754,33 +862,161 @@ jobs:
               }
             }
 
-            async function checkUrl(url, { timeoutMs }) {
-              const controller = new AbortController()
-              const timer = setTimeout(() => controller.abort(), timeoutMs)
-              try {
-                // SSRF Protection
-                try {
-                  const u = new URL(url)
-                  if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Invalid protocol')
-                  const h = u.hostname
-                  if (h === 'localhost' || h === '127.0.0.1' || h === '::1') throw new Error('Localhost not allowed')
-                  if (/^10\./.test(h)) throw new Error('Private IP not allowed')
-                  if (/^192\.168\./.test(h)) throw new Error('Private IP not allowed')
-                  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(h)) throw new Error('Private IP not allowed')
-                } catch (e) {
-                  return { ok: false, error: e.message }
-                }
+            const dns = require('node:dns').promises
+            const net = require('node:net')
+            const MAX_REDIRECTS = 5
+            const MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+            const BLOCKED_IPV4_CIDRS = [
+              ['0.0.0.0', 8],
+              ['10.0.0.0', 8],
+              ['100.64.0.0', 10],
+              ['127.0.0.0', 8],
+              ['169.254.0.0', 16],
+              ['172.16.0.0', 12],
+              ['192.0.0.0', 24],
+              ['192.0.2.0', 24],
+              ['192.168.0.0', 16],
+              ['198.18.0.0', 15],
+              ['198.51.100.0', 24],
+              ['203.0.113.0', 24],
+              ['224.0.0.0', 4],
+              ['240.0.0.0', 4],
+            ]
 
-                const res = await fetch(url, {
-                  method: 'GET',
-                  redirect: 'follow',
-                  headers: {
-                    'user-agent': 'fuwari-auto-pr/1.0 (+github actions)',
-                    accept: 'text/html,application/json,image/*,*/*;q=0.8',
-                  },
-                  signal: controller.signal,
-                })
-                return { ok: res.status >= 200 && res.status < 400, status: res.status }
+            function ipv4ToNumber(address) {
+              const octets = address.split('.').map(Number)
+              if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return null
+              return octets.reduce((value, part) => value * 256 + part, 0)
+            }
+
+            function isIpv4InCidr(address, base, prefix) {
+              const value = ipv4ToNumber(address)
+              const baseValue = ipv4ToNumber(base)
+              if (value === null || baseValue === null) return true
+              const blockSize = 2 ** (32 - prefix)
+              return Math.floor(value / blockSize) === Math.floor(baseValue / blockSize)
+            }
+
+            function parseIpv6(address) {
+              let value = address.toLowerCase().split('%')[0]
+              if (value.includes('.')) {
+                const lastColon = value.lastIndexOf(':')
+                const ipv4 = ipv4ToNumber(value.slice(lastColon + 1))
+                if (ipv4 === null) return null
+                value = `${value.slice(0, lastColon)}:${Math.floor(ipv4 / 65536).toString(16)}:${(ipv4 % 65536).toString(16)}`
+              }
+
+              const halves = value.split('::')
+              if (halves.length > 2) return null
+              const left = halves[0] ? halves[0].split(':') : []
+              const right = halves[1] ? halves[1].split(':') : []
+              const missing = 8 - left.length - right.length
+              if ((halves.length === 1 && missing !== 0) || (halves.length === 2 && missing < 1)) return null
+              const rawParts = halves.length === 2 ? [...left, ...Array(missing).fill('0'), ...right] : left
+              const parts = rawParts.map((part) => Number.parseInt(part, 16))
+              if (parts.length !== 8 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 0xffff)) return null
+              return parts
+            }
+
+            function isBlockedAddress(address) {
+              const normalized = address.replace(/^\[|\]$/g, '')
+              if (net.isIPv4(normalized)) {
+                return BLOCKED_IPV4_CIDRS.some(([base, prefix]) => isIpv4InCidr(normalized, base, prefix))
+              }
+              if (!net.isIPv6(normalized)) return true
+
+              const parts = parseIpv6(normalized)
+              if (!parts) return true
+              const first = parts[0]
+              const isUnspecified = parts.every((part) => part === 0)
+              const isLoopback = parts.slice(0, 7).every((part) => part === 0) && parts[7] === 1
+              if (isUnspecified || isLoopback) return true
+              if ((first & 0xfe00) === 0xfc00) return true
+              if ((first & 0xffc0) === 0xfe80 || (first & 0xffc0) === 0xfec0) return true
+              if ((first & 0xff00) === 0xff00) return true
+              if (parts[0] === 0x2001 && parts[1] === 0x0db8) return true
+
+              const isCompatible = parts.slice(0, 6).every((part) => part === 0)
+              const isMapped = parts.slice(0, 5).every((part) => part === 0) && parts[5] === 0xffff
+              if (isCompatible || isMapped) {
+                const ipv4 = `${parts[6] >> 8}.${parts[6] & 0xff}.${parts[7] >> 8}.${parts[7] & 0xff}`
+                return isBlockedAddress(ipv4)
+              }
+              return false
+            }
+
+            async function validatePublicHttpUrl(rawUrl) {
+              const parsed = new URL(rawUrl)
+              if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('Only http/https URLs are allowed')
+              if (parsed.username || parsed.password) throw new Error('URLs with credentials are not allowed')
+
+              const hostname = parsed.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase()
+              if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local') || hostname.endsWith('.internal') || hostname.endsWith('.home.arpa')) {
+                throw new Error('Local hostnames are not allowed')
+              }
+
+              const addresses = net.isIP(hostname)
+                ? [{ address: hostname }]
+                : await dns.lookup(hostname, { all: true, verbatim: true })
+              if (!addresses.length || addresses.some(({ address }) => isBlockedAddress(address))) {
+                throw new Error('Private, link-local, or reserved addresses are not allowed')
+              }
+              return parsed
+            }
+
+            async function readTextWithLimit(response) {
+              const contentLength = Number(response.headers.get('content-length') || 0)
+              if (contentLength > MAX_RESPONSE_BYTES) throw new Error('Response body is too large')
+              if (!response.body) return ''
+
+              const reader = response.body.getReader()
+              const chunks = []
+              let total = 0
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                total += value.byteLength
+                if (total > MAX_RESPONSE_BYTES) {
+                  await reader.cancel()
+                  throw new Error('Response body is too large')
+                }
+                chunks.push(value)
+              }
+
+              const merged = new Uint8Array(total)
+              let offset = 0
+              for (const chunk of chunks) {
+                merged.set(chunk, offset)
+                offset += chunk.byteLength
+              }
+              return new TextDecoder().decode(merged)
+            }
+
+            async function checkUrlReachability(rawUrl) {
+              const controller = new AbortController()
+              const timer = setTimeout(() => controller.abort(), 10000)
+              try {
+                let current = await validatePublicHttpUrl(rawUrl)
+                for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
+                  const res = await fetch(current, {
+                    method: 'GET',
+                    redirect: 'manual',
+                    headers: { 'user-agent': 'fuwari-auto-pr/1.0 (+github actions)', accept: 'text/html,application/json,image/*,*/*;q=0.8' },
+                    signal: controller.signal,
+                  })
+                  const location = res.headers.get('location')
+                  if (res.status >= 300 && res.status < 400 && location) {
+                    if (redirectCount === MAX_REDIRECTS) throw new Error('Too many redirects')
+                    current = await validatePublicHttpUrl(new URL(location, current).toString())
+                    continue
+                  }
+
+                  const contentType = res.headers.get('content-type') || ''
+                  const shouldReadBody = res.ok && (!contentType || contentType.includes('text/') || contentType.includes('json'))
+                  const body = shouldReadBody ? await readTextWithLimit(res) : ''
+                  return { ok: res.ok, status: res.status, body, url: current.toString(), contentType }
+                }
+                return { ok: false, error: 'Too many redirects' }
               } catch (e) {
                 return { ok: false, error: e?.message || String(e) }
               } finally {
@@ -1007,25 +1243,6 @@ jobs:
               title: `${primary.kind === 'friend' ? '友链' : '赞助'}：${primary.data.name}`,
             })
             const siteBase = await getSiteBase(pr.data.base.repo.default_branch)
-
-            async function checkUrlReachability(url) {
-              const controller = new AbortController()
-              const timer = setTimeout(() => controller.abort(), 10000)
-              try {
-                const res = await fetch(url, {
-                  method: 'GET',
-                  redirect: 'follow',
-                  headers: { 'user-agent': 'fuwari-auto-pr/1.0 (+github actions)', accept: 'text/html,*/*;q=0.8' },
-                  signal: controller.signal,
-                })
-                const body = res.ok ? await res.text() : ''
-                return { ok: res.ok, status: res.status, body, url: res.url }
-              } catch (e) {
-                return { ok: false, error: e?.message || String(e) }
-              } finally {
-                clearTimeout(timer)
-              }
-            }
 
             const avatarUrl = normalizeUrl(primary.data.avatar, siteBase)
             const siteUrl = normalizeUrl(primary.data.url, siteBase)
