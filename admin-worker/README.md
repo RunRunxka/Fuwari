@@ -61,3 +61,4 @@ https://fuwari-studio-api.<account>.workers.dev
 - GitHub App token 被限制到单个仓库及 Contents/Pull requests 权限。
 - 文章请求限制为 1 MB，文件路径只能位于 `src/content/posts`。
 - 发布只创建唯一分支和草稿 PR，不会直接写入或合并 `main`。
+- 如果 PR 创建失败，Worker 会尝试删除刚创建的临时分支，避免留下无主分支。

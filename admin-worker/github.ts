@@ -64,6 +64,7 @@ async function githubRequest<T>(
 		}
 		throw new GitHubApiError(message, response.status);
 	}
+	if (response.status === 204) return undefined as T;
 	return (await response.json()) as T;
 }
 
@@ -329,28 +330,42 @@ export async function publishPost(
 	});
 
 	const action = isNewPost ? "发布" : "更新";
-	const pullRequest = await githubRequest<PullRequest>(
-		`/repos/${owner}/${repo}/pulls`,
-		token,
-		{
-			method: "POST",
-			body: JSON.stringify({
-				title: `${action}文章《${title}》`,
-				head: branch,
-				base: baseBranch,
-				draft: true,
-				body: [
-					"## Fuwari Studio 发布请求",
-					"",
-					`- 操作者：@${actor.sub}`,
-					`- 文章：\`${postPath(slug)}\``,
-					`- 类型：${isNewPost ? "新文章" : sourceSlug === slug ? "更新文章" : `重命名（${sourceSlug} → ${slug}）`}`,
-					"",
-					"> 此 PR 不会自动合并。请确认预览和 Actions 检查后再人工合并。",
-				].join("\n"),
-			}),
-		},
-	);
+	let pullRequest: PullRequest;
+	try {
+		pullRequest = await githubRequest<PullRequest>(
+			`/repos/${owner}/${repo}/pulls`,
+			token,
+			{
+				method: "POST",
+				body: JSON.stringify({
+					title: `${action}文章《${title}》`,
+					head: branch,
+					base: baseBranch,
+					draft: true,
+					body: [
+						"## Fuwari Studio 发布请求",
+						"",
+						`- 操作者：@${actor.sub}`,
+						`- 文章：\`${postPath(slug)}\``,
+						`- 类型：${isNewPost ? "新文章" : sourceSlug === slug ? "更新文章" : `重命名（${sourceSlug} → ${slug}）`}`,
+						"",
+						"> 此 PR 不会自动合并。请确认预览和 Actions 检查后再人工合并。",
+					].join("\n"),
+				}),
+			},
+		);
+	} catch (error) {
+		try {
+			await githubRequest<void>(
+				`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`,
+				token,
+				{ method: "DELETE" },
+			);
+		} catch {
+			// Leave the exact recovery branch in place if GitHub rejects cleanup.
+		}
+		throw error;
+	}
 
 	return {
 		pullRequestUrl: pullRequest.html_url,
