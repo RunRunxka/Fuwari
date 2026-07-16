@@ -1,0 +1,69 @@
+---
+import "@fontsource-variable/jetbrains-mono";
+
+import { getCollection } from "astro:content";
+import type { AdminPost } from "@/types/admin";
+import AdminStudio from "@components/admin/AdminStudio.svelte";
+import Layout from "@layouts/Layout.astro";
+
+function toDateTimeInput(date: Date | undefined): string | undefined {
+	if (!date) return undefined;
+	return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+		.toISOString()
+		.slice(0, 16);
+}
+
+const entries = await getCollection("posts");
+const posts: AdminPost[] = entries
+	.map((entry) => ({
+		id: entry.id,
+		slug: entry.slug,
+		title: entry.data.title,
+		published: toDateTimeInput(entry.data.published) ?? "",
+		updated: toDateTimeInput(entry.data.updated),
+		draft: entry.data.draft,
+		description: entry.data.description,
+		image: entry.data.image,
+		tags: [...entry.data.tags],
+		lang: entry.data.lang || "zh-cn",
+		pinned: entry.data.pinned,
+		aiLevel: entry.data.ai_level,
+		body: entry.body ?? "",
+	}))
+	.sort(
+		(a, b) => new Date(b.published).getTime() - new Date(a.published).getTime(),
+	);
+
+const apiBase = import.meta.env.PUBLIC_ADMIN_API_BASE_URL ?? "";
+---
+
+<Layout
+	title="Fuwari Studio"
+	description="Fuwari 博客文章管理与发布工作台"
+>
+	<Fragment slot="head">
+		<meta name="robots" content="noindex, nofollow, noarchive" />
+	</Fragment>
+	<main class="admin-page">
+		<AdminStudio posts={posts} apiBase={apiBase} client:only="svelte" />
+	</main>
+</Layout>
+
+<style is:global>
+	body:has(.admin-page) #site-bg-layer::after {
+		position: absolute;
+		inset: 0;
+		content: "";
+		background: color-mix(in oklab, var(--page-bg) 28%, transparent);
+		backdrop-filter: blur(2px);
+		-webkit-backdrop-filter: blur(2px);
+	}
+
+	body:has(.admin-page) #site-content {
+		isolation: isolate;
+	}
+
+	.admin-page {
+		min-height: 100vh;
+	}
+</style>
