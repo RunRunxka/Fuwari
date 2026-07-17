@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+	<title id="title">Fuwari 项目结构与内容发布链路</title>
+	<desc id="desc">展示博客前台、Fuwari Studio、Cloudflare Worker、R2、GitHub 仓库、GitHub Actions 与阿里云服务器之间的关系。</desc>
+	<defs>
+		<linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#11152a" />
+			<stop offset="0.52" stop-color="#16152c" />
+			<stop offset="1" stop-color="#0d1d2d" />
+		</linearGradient>
+		<linearGradient id="studio" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#ff8da1" />
+			<stop offset="1" stop-color="#ffb36b" />
+		</linearGradient>
+		<linearGradient id="edge" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#62d5f3" />
+			<stop offset="1" stop-color="#7a9cff" />
+		</linearGradient>
+		<linearGradient id="git" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#b798ff" />
+			<stop offset="1" stop-color="#7e7bf7" />
+		</linearGradient>
+		<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+			<feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#020617" flood-opacity="0.3" />
+		</filter>
+		<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+			<path d="M 0 0 L 10 5 L 0 10 z" fill="#9aa7bd" />
+		</marker>
+		<style>
+			.title { font: 700 46px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #f8fafc; }
+			.subtitle { font: 400 22px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #aeb9ca; }
+			.lane { font: 600 18px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #9aa7bd; letter-spacing: 2px; }
+			.card-title { font: 700 27px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #f8fafc; }
+			.card-copy { font: 400 18px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #c6cfdd; }
+			.card-code { font: 500 17px Consolas, "Microsoft YaHei", monospace; fill: #e7ebf3; }
+			.flow-label { font: 500 16px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #aeb9ca; }
+			.badge { font: 700 16px "Microsoft YaHei", "PingFang SC", sans-serif; fill: #111827; }
+			.tree-root { font: 700 23px Consolas, "Microsoft YaHei", monospace; fill: #f8fafc; }
+			.tree-line { font: 500 17px Consolas, "Microsoft YaHei", monospace; fill: #c6cfdd; }
+			.connector { fill: none; stroke: #9aa7bd; stroke-width: 3; marker-end: url(#arrow); }
+			.connector-soft { fill: none; stroke: #64748b; stroke-width: 2; stroke-dasharray: 8 8; marker-end: url(#arrow); }
+		</style>
+	</defs>
+
+	<rect width="1600" height="1000" rx="36" fill="url(#background)" />
+	<circle cx="1460" cy="110" r="210" fill="#5eead4" opacity="0.035" />
+	<circle cx="160" cy="930" r="260" fill="#fb7185" opacity="0.04" />
+
+	<text x="76" y="88" class="title">Fuwari 项目结构与内容发布链路</text>
+	<text x="78" y="126" class="subtitle">Astro 静态博客 × Svelte 管理端 × Cloudflare 边缘服务 × GitHub 自动交付</text>
+
+	<text x="76" y="183" class="lane">浏览器体验层</text>
+	<text x="572" y="183" class="lane">边缘服务层</text>
+	<text x="1066" y="183" class="lane">内容与交付层</text>
+
+	<g filter="url(#shadow)">
+		<rect x="76" y="210" width="420" height="168" rx="24" fill="#24253a" stroke="#fb7185" stroke-opacity="0.45" />
+		<rect x="96" y="230" width="78" height="28" rx="14" fill="url(#studio)" />
+		<text x="135" y="250" class="badge" text-anchor="middle">PUBLIC</text>
+		<text x="98" y="302" class="card-title">博客前台</text>
+		<text x="98" y="336" class="card-copy">Astro · 文章、RSS、搜索与评论</text>
+		<text x="98" y="364" class="card-code">runrunxka.xyz</text>
+	</g>
+
+	<g filter="url(#shadow)">
+		<rect x="76" y="410" width="420" height="200" rx="24" fill="#24253a" stroke="#fb7185" stroke-opacity="0.45" />
+		<rect x="96" y="430" width="86" height="28" rx="14" fill="url(#studio)" />
+		<text x="139" y="450" class="badge" text-anchor="middle">ADMIN</text>
+		<text x="98" y="502" class="card-title">Fuwari Studio</text>
+		<text x="98" y="536" class="card-copy">Svelte · 编辑、预览、本地草稿</text>
+		<text x="98" y="566" class="card-copy">发布 / 删除 / 封面与正文素材</text>
+		<text x="98" y="594" class="card-code">src/components/admin/</text>
+	</g>
+
+	<g filter="url(#shadow)">
+		<rect x="572" y="210" width="420" height="250" rx="24" fill="#202b3d" stroke="#67d7f3" stroke-opacity="0.5" />
+		<rect x="592" y="230" width="104" height="28" rx="14" fill="url(#edge)" />
+		<text x="644" y="250" class="badge" text-anchor="middle">WORKER</text>
+		<text x="594" y="302" class="card-title">Fuwari Studio API</text>
+		<text x="594" y="336" class="card-copy">GitHub OAuth + 管理员白名单</text>
+		<text x="594" y="366" class="card-copy">短会话、GitHub App 安装令牌</text>
+		<text x="594" y="396" class="card-copy">文章 PR 与图片 API</text>
+		<text x="594" y="434" class="card-code">admin-worker/</text>
+	</g>
+
+	<g filter="url(#shadow)">
+		<rect x="572" y="500" width="420" height="110" rx="24" fill="#2b2a32" stroke="#fbbf24" stroke-opacity="0.52" />
+		<circle cx="622" cy="555" r="27" fill="#fbbf24" opacity="0.9" />
+		<path d="M607 547h30v18h-30z M611 541h22v7h-22z" fill="#1f2937" />
+		<text x="670" y="546" class="card-title">Cloudflare R2</text>
+		<text x="670" y="578" class="card-copy">WebP 素材 · 哈希命名 · 不可变缓存</text>
+	</g>
+
+	<g filter="url(#shadow)">
+		<rect x="1066" y="210" width="458" height="196" rx="24" fill="#29243f" stroke="#a78bfa" stroke-opacity="0.5" />
+		<rect x="1086" y="230" width="86" height="28" rx="14" fill="url(#git)" />
+		<text x="1129" y="250" class="badge" text-anchor="middle">GITHUB</text>
+		<text x="1088" y="302" class="card-title">内容仓库</text>
+		<text x="1088" y="338" class="card-code">src/content/posts/</text>
+		<text x="1088" y="370" class="card-copy">唯一内容源 · Draft PR · 人工审阅</text>
+	</g>
+
+	<g filter="url(#shadow)">
+		<rect x="1066" y="446" width="218" height="164" rx="24" fill="#222b3c" stroke="#60a5fa" stroke-opacity="0.5" />
+		<text x="1088" y="492" class="card-title">GitHub Actions</text>
+		<text x="1088" y="528" class="card-copy">Schema 校验</text>
+		<text x="1088" y="558" class="card-copy">构建与部署</text>
+		<text x="1088" y="588" class="card-code">workflows/</text>
+	</g>
+
+	<g filter="url(#shadow)">
+		<rect x="1306" y="446" width="218" height="164" rx="24" fill="#223033" stroke="#5eead4" stroke-opacity="0.48" />
+		<text x="1328" y="492" class="card-title">阿里云 ECS</text>
+		<text x="1328" y="528" class="card-copy">Nginx 静态托管</text>
+		<text x="1328" y="558" class="card-copy">线上博客站点</text>
+		<text x="1328" y="588" class="card-code">dist/</text>
+	</g>
+
+	<path d="M496 506 C532 506 536 335 572 335" class="connector" />
+	<text x="514" y="404" class="flow-label">鉴权与内容请求</text>
+	<path d="M782 460 L782 500" class="connector" />
+	<text x="800" y="488" class="flow-label">上传</text>
+	<path d="M992 325 L1066 306" class="connector" />
+	<text x="1006" y="293" class="flow-label">Draft PR</text>
+	<path d="M1295 406 L1177 446" class="connector" />
+	<text x="1202" y="435" class="flow-label">合并 main</text>
+	<path d="M1284 528 L1306 528" class="connector" />
+	<path d="M1415 446 C1415 392 1490 382 1490 350 C1490 288 1530 286 1530 286" class="connector-soft" />
+	<path d="M572 555 C532 555 548 330 496 330" class="connector-soft" />
+	<text x="504" y="552" class="flow-label">公开图片</text>
+
+	<rect x="76" y="674" width="1448" height="260" rx="28" fill="#171b2d" stroke="#465169" stroke-opacity="0.7" />
+	<text x="108" y="722" class="tree-root">Fuwari/</text>
+	<text x="108" y="762" class="tree-line">├─ src/pages/                 博客路由与 /admin 入口</text>
+	<text x="108" y="798" class="tree-line">├─ src/components/admin/      Studio 编辑器、预览与素材抽屉</text>
+	<text x="108" y="834" class="tree-line">├─ src/content/posts/         Markdown 文章内容</text>
+	<text x="108" y="870" class="tree-line">├─ src/scripts/               Swup、SVG 修复与滚动动画</text>
+	<text x="822" y="762" class="tree-line">├─ admin-worker/              OAuth、GitHub App、R2 API</text>
+	<text x="822" y="798" class="tree-line">├─ .github/workflows/         校验、构建与自动部署</text>
+	<text x="822" y="834" class="tree-line">├─ scripts/                   链接巡检与文章历史生成</text>
+	<text x="822" y="870" class="tree-line">└─ public/images/             文章公共图片资源</text>
+
+	<text x="76" y="970" class="subtitle">内容仍由 Git 管理；管理端只创建可审阅的变更，图片则通过 R2 独立交付。</text>
+</svg>
