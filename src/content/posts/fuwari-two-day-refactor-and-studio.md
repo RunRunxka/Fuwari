@@ -1,11 +1,13 @@
 ---
-title: 两天，把 Fuwari 博客升级成可管理的内容系统
-published: 2026-07-17T13:53
-description: 记录 Fuwari 在两天内完成的安全加固、导航修复、动画优化，以及从零搭建 Studio 管理端、GitHub App 发布服务和 R2 图片素材库的全过程。
-image: /images/fuwari-project-architecture.svg
-tags: [Fuwari, Astro, Cloudflare Workers, GitHub Actions, 工程实践]
-draft: true
-ai_level: 3
+title: "两天，把 Fuwari 博客升级成可管理的内容系统"
+published: 2026-07-17T05:53
+description: "记录 Fuwari 在两天内完成的安全加固、导航修复、动画优化，以及从零搭建 Studio 管理端、GitHub App 发布服务和 R2 图片素材库的全过程。"
+image: "/images/fuwari-project-architecture.svg"
+tags: ["Fuwari", "Astro", "Cloudflare Workers", "GitHub Actions", "工程实践"]
+lang: "zh-cn"
+draft: false
+pinned: false
+ai_level: 1
 ---
 
 过去两天，我没有继续给博客堆叠新的展示效果，而是先补地基，再给它造了一间真正能工作的“内容工作室”。
