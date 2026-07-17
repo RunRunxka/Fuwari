@@ -1,5 +1,7 @@
 <script lang="ts">
 import type {
+	AdminAsset,
+	AdminAssetRole,
 	AdminAuthStatus,
 	AdminPost,
 	AdminPublishResult,
@@ -21,6 +23,7 @@ import { getThemeMode, setTheme, setThemeMode } from "@utils/setting-utils";
 import { gsap } from "gsap";
 import MarkdownIt from "markdown-it";
 import { onMount, tick } from "svelte";
+import AdminAssetDrawer from "./AdminAssetDrawer.svelte";
 import AdminPostPreview from "./AdminPostPreview.svelte";
 
 type PostFilter = "all" | "draft" | "published";
@@ -60,6 +63,7 @@ let rootElement: HTMLElement;
 let editorPanel: HTMLElement;
 let previewPanel: HTMLElement;
 let noticeElement: HTMLElement;
+let bodyTextarea: HTMLTextAreaElement;
 let workspacePosts = posts.map(cloneAdminPost);
 let selectedId = workspacePosts[0]?.id ?? "";
 let currentPost = workspacePosts[0]
@@ -81,6 +85,11 @@ let authUser: AdminSessionUser | null = null;
 let sessionToken = "";
 let sessionExpiresAt = "";
 let themeMode: ThemeMode = SYSTEM_MODE;
+let assetDrawerOpen = false;
+let assetRole: AdminAssetRole = "content";
+let pendingAssetFile: File | null = null;
+let bodySelectionStart = 0;
+let bodySelectionEnd = 0;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let selectionTween: ReturnType<typeof gsap.fromTo> | undefined;
 let noticeTween: ReturnType<typeof gsap.fromTo> | undefined;
@@ -163,6 +172,12 @@ $: sessionExpiryLabel = sessionExpiresAt
 			minute: "2-digit",
 		}).format(new Date(sessionExpiresAt))
 	: "";
+$: normalizedCoverImage = currentPost.image.trim();
+$: coverPreviewUrl =
+	normalizedCoverImage.startsWith("/") ||
+	/^https?:\/\//.test(normalizedCoverImage)
+		? normalizedCoverImage
+		: "";
 
 function createEmptyPost(): AdminPost {
 	const now = new Date();
@@ -324,6 +339,105 @@ function updateTags(event: Event): void {
 		.filter(Boolean);
 	currentPost = cloneAdminPost(currentPost);
 	scheduleLocalSave();
+}
+
+function rememberBodySelection(target = bodyTextarea): void {
+	if (!target) {
+		bodySelectionStart = currentPost.body.length;
+		bodySelectionEnd = currentPost.body.length;
+		return;
+	}
+	bodySelectionStart = target.selectionStart;
+	bodySelectionEnd = target.selectionEnd;
+}
+
+function openAssetDrawer(role: AdminAssetRole, file: File | null = null): void {
+	if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(currentPost.slug)) {
+		showNotice("请先填写有效的文章路径，再管理图片素材。");
+		return;
+	}
+	if (!normalizedApiBase) {
+		showNotice("图片服务尚未配置；请先部署带 R2 绑定的 admin-worker。");
+		return;
+	}
+	if (authState !== "authenticated" || !sessionToken) {
+		if (authState === "checking") {
+			showNotice("正在验证 GitHub 管理身份，请稍候再试。");
+			return;
+		}
+		startGitHubLogin();
+		return;
+	}
+	if (role === "content") rememberBodySelection();
+	assetRole = role;
+	pendingAssetFile = file;
+	assetDrawerOpen = true;
+}
+
+function closeAssetDrawer(): void {
+	assetDrawerOpen = false;
+	pendingAssetFile = null;
+}
+
+function escapeMarkdownAlt(value: string): string {
+	return value.replace(/\\/g, "\\\\").replace(/\]/g, "\\]");
+}
+
+function insertBodyImage(asset: AdminAsset, alt: string): void {
+	const start = Math.min(bodySelectionStart, currentPost.body.length);
+	const end = Math.min(
+		Math.max(bodySelectionEnd, start),
+		currentPost.body.length,
+	);
+	const before = currentPost.body.slice(0, start);
+	const after = currentPost.body.slice(end);
+	const prefix = before && !before.endsWith("\n") ? "\n\n" : "";
+	const suffix = after && !after.startsWith("\n") ? "\n\n" : "";
+	const markdownImage = `![${escapeMarkdownAlt(alt)}](${asset.url})`;
+	currentPost.body = `${before}${prefix}${markdownImage}${suffix}${after}`;
+	const cursor = before.length + prefix.length + markdownImage.length;
+	bodySelectionStart = cursor;
+	bodySelectionEnd = cursor;
+	scheduleLocalSave();
+	void tick().then(() => {
+		if (!bodyTextarea) return;
+		bodyTextarea.focus();
+		bodyTextarea.setSelectionRange(cursor, cursor);
+	});
+}
+
+function handleAssetSelect(asset: AdminAsset, alt: string): void {
+	if (assetRole === "cover") {
+		currentPost.image = asset.url;
+		scheduleLocalSave();
+		showNotice("封面已更新，发布文章时会写入新的图片地址。");
+		return;
+	}
+	insertBodyImage(asset, alt);
+	showNotice("图片 Markdown 已插入正文。");
+}
+
+function firstImageFile(files: FileList | null): File | null {
+	return (
+		Array.from(files ?? []).find((file) => file.type.startsWith("image/")) ??
+		null
+	);
+}
+
+function handleBodyPaste(event: ClipboardEvent): void {
+	const file = firstImageFile(event.clipboardData?.files ?? null);
+	if (!file) return;
+	event.preventDefault();
+	rememberBodySelection(event.currentTarget as HTMLTextAreaElement);
+	openAssetDrawer("content", file);
+}
+
+function handleBodyDrop(event: DragEvent): void {
+	const file = firstImageFile(event.dataTransfer?.files ?? null);
+	if (!file) return;
+	event.preventDefault();
+	rememberBodySelection(event.currentTarget as HTMLTextAreaElement);
+	openAssetDrawer("content", file);
 }
 
 async function selectPost(post: AdminPost): Promise<void> {
@@ -957,9 +1071,42 @@ onMount(() => {
 						<input value={tagsInput} oninput={updateTags} placeholder="Astro, GitHub Actions, 随笔" />
 					</label>
 					<label>
-						<span>封面路径</span>
-						<input bind:value={currentPost.image} oninput={scheduleLocalSave} placeholder="./cover.jpg 或 https://..." />
+						<span>封面地址</span>
+						<input bind:value={currentPost.image} oninput={scheduleLocalSave} placeholder="从素材库选择，或粘贴 https:// 地址" />
 					</label>
+				</div>
+
+				<div class:has-cover={Boolean(coverPreviewUrl)} class="cover-manager">
+					<div class="cover-thumb">
+						{#if coverPreviewUrl}
+							<img src={coverPreviewUrl} alt="当前文章封面预览" />
+						{:else}
+							<Icon icon="material-symbols:panorama-outline-rounded" />
+						{/if}
+					</div>
+					<div class="cover-copy">
+						<strong>{currentPost.image ? "封面地址已设置" : "为文章挑一张封面"}</strong>
+						<small>{currentPost.image ? currentPost.image : "图片会压缩为 WebP 并保存到 Cloudflare R2"}</small>
+					</div>
+					<div class="cover-actions">
+						<button class="studio-button button-quiet" type="button" onclick={() => openAssetDrawer("cover")}>
+							<Icon icon="material-symbols:photo-library-outline-rounded" />
+							上传 / 素材库
+						</button>
+						{#if currentPost.image}
+							<button
+								class="cover-clear"
+								type="button"
+								aria-label="清除文章封面"
+								onclick={() => {
+									currentPost.image = "";
+									scheduleLocalSave();
+								}}
+							>
+								<Icon icon="material-symbols:close-rounded" />
+							</button>
+						{/if}
+					</div>
 				</div>
 
 				<div class="toggle-row">
@@ -975,10 +1122,31 @@ onMount(() => {
 					</label>
 				</div>
 
-				<label class="body-field">
-					<span class="body-label"><span>正文</span><small>{currentPost.body.length} 字符</small></span>
-					<textarea bind:value={currentPost.body} oninput={scheduleLocalSave} spellcheck="false" placeholder="# 开始写作"></textarea>
-				</label>
+				<div class="body-field">
+					<span class="body-label">
+						<span>正文</span>
+						<span class="body-tools">
+							<button type="button" onclick={() => openAssetDrawer("content")}>
+								<Icon icon="material-symbols:add-photo-alternate-outline-rounded" />
+								插入图片
+							</button>
+							<small>{currentPost.body.length} 字符</small>
+						</span>
+					</span>
+					<textarea
+						bind:this={bodyTextarea}
+						bind:value={currentPost.body}
+						oninput={scheduleLocalSave}
+						onselect={() => rememberBodySelection()}
+						onkeyup={() => rememberBodySelection()}
+						onpaste={handleBodyPaste}
+						ondragover={(event) => event.preventDefault()}
+						ondrop={handleBodyDrop}
+						spellcheck="false"
+						aria-label="文章正文"
+						placeholder="# 开始写作"
+					></textarea>
+				</div>
 			</div>
 		</main>
 
@@ -1064,6 +1232,19 @@ onMount(() => {
 			</section>
 		</aside>
 	</div>
+
+	{#if assetDrawerOpen}
+		<AdminAssetDrawer
+			open={assetDrawerOpen}
+			apiBase={normalizedApiBase}
+			{sessionToken}
+			postSlug={currentPost.slug}
+			role={assetRole}
+			initialFile={pendingAssetFile}
+			onClose={closeAssetDrawer}
+			onSelect={handleAssetSelect}
+		/>
+	{/if}
 
 	{#if notice}
 		<div class="studio-notice card-base" bind:this={noticeElement} role="status">
@@ -1539,6 +1720,73 @@ onMount(() => {
 		grid-template-columns: 1fr 1fr;
 	}
 
+	.cover-manager {
+		display: grid;
+		grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 0.85rem;
+		padding: 0.72rem;
+		border: 1px solid color-mix(in oklab, var(--primary) 18%, var(--line-divider));
+		border-radius: 0.82rem;
+		background: color-mix(in oklab, var(--primary) 4%, var(--btn-regular-bg));
+	}
+
+	.cover-thumb {
+		display: grid;
+		place-items: center;
+		aspect-ratio: 16 / 9;
+		overflow: hidden;
+		border-radius: 0.62rem;
+		background: color-mix(in oklab, var(--page-bg) 78%, var(--btn-regular-bg));
+		color: color-mix(in oklab, currentColor 30%, transparent);
+		font-size: 1.45rem;
+	}
+
+	.cover-thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.cover-copy {
+		min-width: 0;
+	}
+
+	.cover-copy strong,
+	.cover-copy small {
+		display: block;
+	}
+
+	.cover-copy strong {
+		font-size: 0.76rem;
+	}
+
+	.cover-copy small {
+		overflow: hidden;
+		margin-top: 0.2rem;
+		font-family: "JetBrains Mono Variable", monospace;
+		font-size: 0.59rem;
+		color: color-mix(in oklab, currentColor 44%, transparent);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.cover-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.42rem;
+	}
+
+	.cover-clear {
+		display: grid;
+		place-items: center;
+		width: 2.35rem;
+		height: 2.35rem;
+		border-radius: 0.65rem;
+		background: color-mix(in oklab, oklch(0.65 0.2 25) 9%, var(--btn-regular-bg));
+		color: color-mix(in oklab, oklch(0.68 0.18 25) 78%, currentColor);
+	}
+
 	input,
 	textarea,
 	select,
@@ -1681,6 +1929,25 @@ onMount(() => {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+	}
+
+	.body-tools {
+		display: flex;
+		align-items: center;
+		gap: 0.65rem;
+	}
+
+	.body-tools button {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.32rem;
+		min-height: 2rem;
+		padding: 0 0.62rem;
+		border-radius: 0.56rem;
+		background: color-mix(in oklab, var(--primary) 11%, var(--btn-regular-bg));
+		font-size: 0.65rem;
+		font-weight: 700;
+		color: var(--primary);
 	}
 
 	.body-label small {
@@ -2019,6 +2286,19 @@ onMount(() => {
 		.metadata-grid-wide,
 		.toggle-row {
 			grid-template-columns: 1fr;
+		}
+
+		.cover-manager {
+			grid-template-columns: 5rem minmax(0, 1fr);
+		}
+
+		.cover-actions {
+			grid-column: 1 / -1;
+		}
+
+		.cover-actions .studio-button {
+			width: auto;
+			padding: 0 0.75rem;
 		}
 
 		.editor-heading {

@@ -38,6 +38,20 @@ pnpm dlx wrangler@latest secret put SESSION_SECRET --config admin-worker/wrangle
 
 `SESSION_SECRET` 至少 32 个随机字符。建议使用密码管理器生成 48 字节以上的随机值。
 
+### 启用图片素材存储
+
+Fuwari Studio 使用 Cloudflare R2 保存文章封面和正文图片。首次部署前需要先在 Cloudflare 账户中启用 R2，然后创建与 `wrangler.jsonc` 一致的 Bucket：
+
+```powershell
+pnpm dlx wrangler@latest r2 bucket create fuwari-media --config admin-worker/wrangler.jsonc
+```
+
+`MEDIA_BUCKET` 是 Worker 内部的 R2 binding，`MEDIA_PUBLIC_BASE_URL` 是公开图片地址前缀。修改 `wrangler.jsonc` 后重新生成 Worker 类型：
+
+```powershell
+pnpm dlx wrangler@latest types admin-worker/worker-configuration.d.ts --config admin-worker/wrangler.jsonc --env-interface WorkerBindings
+```
+
 ## 3. 部署
 
 ```powershell
@@ -60,5 +74,8 @@ https://fuwari-studio-api.<account>.workers.dev
 - 管理会话使用 HMAC 签名并在两小时后过期。
 - GitHub App token 被限制到单个仓库及 Contents/Pull requests 权限。
 - 文章请求限制为 1 MB，文件路径只能位于 `src/content/posts`。
+- 图片列表和上传接口需要有效的 Studio 管理会话，公开端只提供按内容哈希命名的图片读取地址。
+- 原图在浏览器中缩放、移除 EXIF 并转为 WebP；Worker 再校验 10 MB 上限、MIME 与文件魔数，拒绝 SVG、GIF 和伪造格式。
+- 图片使用不可变缓存；当前阶段不提供删除接口，避免文章仍在引用时误删素材。
 - 发布、更新和删除只创建唯一分支和草稿 PR，不会直接写入或合并 `main`。
 - 如果 PR 创建失败，Worker 会尝试删除刚创建的临时分支，避免留下无主分支。

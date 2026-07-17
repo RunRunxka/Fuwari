@@ -1,4 +1,23 @@
 export type AdminPostStatus = "draft" | "published";
+export type AdminAssetRole = "cover" | "content";
+
+export interface AdminAsset {
+	key: string;
+	url: string;
+	size: number;
+	uploaded: string;
+	role: AdminAssetRole;
+	postSlug: string;
+	alt: string;
+	originalName: string;
+	contentType: string;
+	etag: string;
+}
+
+export interface AdminAssetList {
+	assets: AdminAsset[];
+	cursor: string | null;
+}
 
 export interface AdminPost {
 	id: string;

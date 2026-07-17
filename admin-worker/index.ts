@@ -1,4 +1,5 @@
-import { deletePost, GitHubApiError, publishPost } from "./github";
+import { AssetError, listAssets, serveAsset, uploadAsset } from "./assets";
+import { GitHubApiError, deletePost, publishPost } from "./github";
 import {
 	constantTimeEqual,
 	createRandomToken,
@@ -43,7 +44,10 @@ function withCors(headers: Headers, request: Request, env: Env): Headers {
 	if (origin === env.FRONTEND_ORIGIN) {
 		headers.set("Access-Control-Allow-Origin", origin);
 		headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
-		headers.set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+		headers.set(
+			"Access-Control-Allow-Methods",
+			"GET, HEAD, POST, DELETE, OPTIONS",
+		);
 		headers.set("Vary", "Origin");
 	}
 	return headers;
@@ -78,10 +82,12 @@ function oauthCallbackUrl(request: Request): string {
 }
 
 function validateEnvironment(env: Env): void {
-	const required: Array<keyof Env> = [
+	const required = [
 		"FRONTEND_ORIGIN",
 		"GITHUB_OWNER",
 		"GITHUB_REPO",
+		"GITHUB_BASE_BRANCH",
+		"MEDIA_PUBLIC_BASE_URL",
 		"GITHUB_APP_ID",
 		"GITHUB_APP_INSTALLATION_ID",
 		"GITHUB_APP_PRIVATE_KEY",
@@ -89,11 +95,14 @@ function validateEnvironment(env: Env): void {
 		"GITHUB_APP_CLIENT_SECRET",
 		"ADMIN_GITHUB_LOGINS",
 		"SESSION_SECRET",
-	];
+	] as const;
 	for (const key of required) {
-		if (!env[key]?.trim())
+		const value = env[key];
+		if (typeof value !== "string" || !value.trim()) {
 			throw new ApiError(`Worker 缺少环境变量：${key}`, 503);
+		}
 	}
+	if (!env.MEDIA_BUCKET) throw new ApiError("Worker 缺少 R2 媒体绑定", 503);
 	if (env.SESSION_SECRET.length < 32) {
 		throw new ApiError("SESSION_SECRET 至少需要 32 个字符", 503);
 	}
@@ -294,6 +303,13 @@ async function route(request: Request, env: Env): Promise<Response> {
 			env,
 		);
 	}
+	if (
+		(request.method === "GET" || request.method === "HEAD") &&
+		url.pathname.startsWith("/media/")
+	) {
+		const response = await serveAsset(request, env);
+		if (response) return response;
+	}
 	if (request.method === "GET" && url.pathname === "/api/auth/login") {
 		return handleLogin(request, env);
 	}
@@ -316,6 +332,18 @@ async function route(request: Request, env: Env): Promise<Response> {
 			request,
 			env,
 		);
+	}
+	if (request.method === "GET" && url.pathname === "/api/assets") {
+		validateEnvironment(env);
+		await requireSession(request, env);
+		const result = await listAssets(request, env);
+		return jsonResponse(result, 200, request, env);
+	}
+	if (request.method === "POST" && url.pathname === "/api/assets") {
+		validateEnvironment(env);
+		const session = await requireSession(request, env);
+		const result = await uploadAsset(request, env, session.sub);
+		return jsonResponse(result, 201, request, env);
 	}
 
 	const publishMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/publish$/);
@@ -360,14 +388,30 @@ export default {
 			const status =
 				error instanceof ApiError
 					? error.status
-					: error instanceof GitHubApiError &&
-							(error.status === 400 || error.status === 409)
+					: error instanceof AssetError
 						? error.status
-						: 502;
+						: error instanceof GitHubApiError &&
+								(error.status === 400 || error.status === 409)
+							? error.status
+							: 502;
 			const message =
-				error instanceof ApiError || error instanceof GitHubApiError
+				error instanceof ApiError ||
+				error instanceof AssetError ||
+				error instanceof GitHubApiError
 					? error.message
-					: "发布服务暂时不可用";
+					: "管理服务暂时不可用";
+			if (status >= 500) {
+				console.error(
+					JSON.stringify({
+						event: "studio_request_failed",
+						requestId,
+						method: request.method,
+						pathname: new URL(request.url).pathname,
+						status,
+						message: error instanceof Error ? error.message : "unknown_error",
+					}),
+				);
+			}
 			const response = jsonResponse(
 				{ error: message, requestId },
 				status,
@@ -378,4 +422,4 @@ export default {
 			return response;
 		}
 	},
-};
+} satisfies ExportedHandler<Env>;

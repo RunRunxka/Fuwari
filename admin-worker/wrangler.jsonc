@@ -1,12 +1,26 @@
 {
 	"name": "fuwari-studio-api",
 	"main": "./index.ts",
-	"compatibility_date": "2026-07-16",
+	"compatibility_date": "2026-07-17",
 	"vars": {
 		"FRONTEND_ORIGIN": "https://runrunxka.xyz",
 		"GITHUB_OWNER": "RunRunxka",
 		"GITHUB_REPO": "Fuwari",
-		"GITHUB_BASE_BRANCH": "main"
+		"GITHUB_BASE_BRANCH": "main",
+		"MEDIA_PUBLIC_BASE_URL": "https://fuwari-studio-api.runrunxka.workers.dev/media"
+	},
+	"r2_buckets": [
+		{
+			"binding": "MEDIA_BUCKET",
+			"bucket_name": "fuwari-media"
+		}
+	],
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1
+		}
 	},
 	"secrets": {
 		"required": [
