@@ -1,165 +1,188 @@
 # RunRunxka's Blog
 
-> 基于 [Fuwari](https://github.com/saicaca/fuwari) 深度定制的个人博客，由 [Hermes Agent](https://github.com/NousResearch/hermes-agent) 代理运维。
+这是我的个人技术博客，主要记录开发实践、工具折腾和一些值得回头复盘的问题。站点从 [Fuwari](https://github.com/saicaca/fuwari) 开始，后来根据自己的写作习惯和部署方式逐步改成了现在的样子。
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/55c2c63b-0dac-436e-aaa0-451ad2dfb65a" width="800" alt="site preview" />
-</p>
+博客地址：[runrunxka.xyz](https://runrunxka.xyz)
 
-## 🔥 与原版 Fuwari 的区别
+## 页面预览
 
-| 方面 | 原版 Fuwari | 本仓库 |
-|------|-----------|--------|
-| 🎨 主题色 | 紫色 (hue: 250) | 红色 (hue: 0) |
-| 🌓 主题模式 | 仅暗色 | **暗色 / 日间 / 跟随系统** 三模式 |
-| 📊 统计 | Umami Cloud | **自部署 Umami**（PostgreSQL，同服） |
-| 🚀 部署 | Vercel / Cloudflare | **阿里云 ECS**（GitHub Actions → rsync） |
-| 🤖 运维 | 手动 | **Hermes Agent 全自动**（发文、排障、监控） |
-| 📂 云盘 | 无 | **集成 OpenList 文件管理器** |
-| 💬 评论 | 无 | **Giscus**（GitHub Discussions） |
-| 🖼️ 工具 | 无 | **封面生成器** / AI 参与度卡片 |
-| 🔧 样式 | 50+ 处未适配浅色 | **全面浅色主题覆盖** + 组件级修复 |
+页面截图统一放在 `docs/images/`。下面的文件名先固定下来，之后只要把对应图片替换进去，再取消下方引用的注释即可显示新的截图。
 
-## ✨ 特性
+| 页面 | 图片文件 |
+| --- | --- |
+| 首页 | `docs/images/home.png` |
+| 文章页 | `docs/images/post.png` |
+| Fuwari Studio | `docs/images/studio.png` |
+| 封面生成器 | `docs/images/cover.png` |
 
-- 🚀 Astro 5.0+ 构建，Lighthouse 满分
-- 🌓 暗色 / 日间 / 跟随系统主题切换 + 可自定义色相
-- 🌈 彩虹模式
-- 📝 Markdown 写作，支持 frontmatter 元数据
-- 🔍 全文搜索
-- 📊 文章阅读时间 + 自部署 Umami 访问统计
-- 🏷️ 标签 / 分类 / 置顶
-- 💬 Giscus 评论系统
-- 📡 RSS / Sitemap / SEO 优化
-- 🖼️ 封面生成器（图标 + 文字 + 背景图片）
-- 🤖 AI 参与度标记
-- 📂 导航集成 OpenList 云盘
+<!-- 把截图放入 docs/images/ 后，取消下面引用的注释即可：
 
-## 🛠️ 技术栈
+![首页](docs/images/home.png)
+![文章页](docs/images/post.png)
+![Fuwari Studio](docs/images/studio.png)
+![封面生成器](docs/images/cover.png) -->
 
-| 层 | 技术 |
-|----|------|
-| 框架 | Astro 5.x |
-| 样式 | Tailwind CSS + Stylus |
-| 交互 | Svelte (传统语法) |
-| 评论 | Giscus |
-| 统计 | Umami v3.1.0 (自部署) |
-| 部署 | GitHub Actions → rsync → 阿里云 ECS |
-| 运维 | Hermes Agent |
+项目结构图：
 
-## 🚀 快速开始
+![项目结构图](public/images/fuwari-project-architecture.svg)
+
+## 现在能做什么
+
+- 用 Markdown 写文章，frontmatter 负责标题、发布时间、描述、封面、标签、语言、草稿和置顶状态等信息。
+- 首页支持按时间、标题排序，归档页按年份整理文章，生产环境会自动隐藏草稿。
+- 文章页提供目录、阅读时间、字数、上一篇/下一篇导航、代码高亮、数学公式和图片放大查看。
+- 内置全文搜索、RSS、Sitemap、SEO 元数据和 Giscus 评论。
+- 支持暗色、浅色和跟随系统三种主题模式，也可以调整主题色并开启彩虹模式。
+- `/cover/` 提供一个简单的文章封面生成器，`/tools/` 是工具入口页。
+- `/friends/` 和 `/sponsors/` 用于展示友链与赞助信息，并配有对应的自动校验流程。
+- 站点接入 Umami 统计，导航中还保留了 OpenList 云盘入口。
+- `/admin/` 是 Fuwari Studio，可以编辑文章、预览内容、管理封面和正文图片，并创建发布用的草稿 PR。
+
+## 技术栈
+
+| 位置 | 使用的技术 |
+| --- | --- |
+| 页面框架 | Astro 5.7、TypeScript |
+| 交互组件 | Svelte、GSAP、Swup |
+| 样式 | Tailwind CSS、Stylus |
+| Markdown | Remark、Rehype、Expressive Code、KaTeX |
+| 评论与统计 | Giscus、Umami |
+| 管理端 API | Cloudflare Workers、GitHub OAuth、GitHub App、Cloudflare R2 |
+| 发布 | GitHub Actions、pnpm、rsync |
+
+## 本地运行
+
+项目使用 pnpm，仓库锁定的版本为 `pnpm@9.14.4`。准备好 Node.js 后执行：
 
 ```bash
-# 安装依赖
 pnpm install
-
-# 本地开发
 pnpm dev
-
-# 构建
-pnpm build
 ```
 
-## 📝 发布文章
-
-本仓库由 Hermes Agent 代理运维，发文流程：
-
-1. 将 `.md` 文件和图片放到 OpenList 的 `shared/` 目录
-2. 告诉 Hermes："帮我发布这篇文章"
-3. Hermes 自动完成：格式化 → 提交 → 推送 → CI 构建 → 部署上线
-
-也可以手动：
+开发服务器启动后，按终端提示打开本地地址。常用命令如下：
 
 ```bash
-# 创建文章
-pnpm new-post my-post
+# 生产构建
+pnpm build
 
-# 提交推送
+# 预览构建结果
+pnpm preview
+
+# TypeScript 检查
+pnpm type-check
+
+# 格式化 src
+pnpm format
+
+# 检查并修复 src 的规范问题
+pnpm lint
+```
+
+仓库目前没有单独的测试脚本，日常验证以 `pnpm build` 和 `pnpm type-check` 为主。
+
+## 写文章
+
+### 直接在仓库里写
+
+先创建文章文件：
+
+```bash
+pnpm new-post my-post
+```
+
+脚本会在 `src/content/posts/` 下生成 Markdown 文件。文章的 frontmatter 需要符合 `src/content/config.ts` 中的 schema，最基本的写法如下：
+
+```md
+---
+title: 我的文章
+published: 2026-08-02
+description: 文章摘要
+image: ./cover.webp
+tags:
+  - Astro
+  - TypeScript
+lang: zh-cn
+draft: false
+---
+
+正文从这里开始。
+```
+
+文章图片可以和文章放在内容目录中，也可以使用站点能够访问到的图片地址。修改完成后，按项目约定提交：
+
+```bash
 git add src/content/posts/my-post.md
 git commit -m "posts:发布新文章《我的文章》。"
 git push origin main
 ```
 
-推送后 GitHub Actions 自动构建并 rsync 到服务器，约 1 分钟后生效。
+发布文章时，提交信息使用下面的格式：
 
-也可以通过 `/admin/` 进入 **Fuwari Studio**，在浏览器中编辑、预览并创建文章发布 PR。管理端使用 GitHub OAuth 登录，实际仓库写入由最小权限 GitHub App 完成，不需要在浏览器保存 PAT。发布服务的创建、密钥配置和部署步骤见 [`admin-worker/README.md`](admin-worker/README.md)。
-
-## 🏗️ 部署架构
-
-```
-Windows 本地 (pnpm) 或 Hermes Agent (服务器)
-        │
-        │ git push
-        ▼
-   GitHub Actions
-   (pnpm build)
-        │
-        │ rsync
-        ▼
-   阿里云 ECS (/home/admin/blog/)
-   Python ThreadingHTTPServer :80
-        │
-        ▼
-   你的域名或 IP
+```text
+posts:发布新文章《文章标题》。补充说明。
 ```
 
-配套服务（同服务器）：
-- 📊 **Umami 统计** → `:3000`（PostgreSQL）
-- 📂 **OpenList 云盘** → `:5244`
+### 使用 Fuwari Studio
 
-## 📁 项目结构
+打开 `/admin/` 后，可以在浏览器中编辑文章、查看预览、上传封面和正文图片。Studio 不会把 GitHub PAT 或 App 私钥放进浏览器，而是通过 GitHub OAuth 确认身份，再由独立的 Cloudflare Worker 使用 GitHub App 创建分支和草稿 PR。
 
+文章 PR 需要在 GitHub 上检查并手动合并；合并到 `main` 后，`Build & Deploy` workflow 才会继续构建和部署。管理端 Worker 的创建、密钥、R2 和部署步骤见 [`admin-worker/README.md`](admin-worker/README.md)。
+
+## 发布流程
+
+主分支的发布流程由 `.github/workflows/deploy.yml` 负责：
+
+```text
+提交或合并到 main
+        ↓
+GitHub Actions
+  安装依赖、更新文章历史、pnpm build
+        ↓
+rsync dist/
+        ↓
+服务器上的博客目录
 ```
+
+文章 PR 会先经过 `.github/workflows/validate-post-pr.yml` 的构建检查。这个检查只负责确认文章改动可以正常构建，不会替你合并 PR。
+
+## 目录结构
+
+```text
+.
 ├── src/
-│   ├── components/       # Svelte + Astro 组件
-│   │   ├── CoverGenerator.svelte   # 封面生成器
-│   │   ├── Search.svelte           # 全文搜索
-│   │   └── widget/                 # 小部件（设置、通知等）
+│   ├── components/        # Astro 与 Svelte 组件
 │   ├── content/
-│   │   ├── posts/         # 博客文章 (.md)
-│   │   └── assets/        # 文章图片
-│   ├── layouts/           # 布局
-│   ├── pages/             # 路由页面
-│   ├── styles/            # CSS / Stylus
-│   │   ├── main.css       # 全局样式 + 浅色主题覆盖
-│   │   ├── markdown.css   # 文章渲染样式
-│   │   └── variables.styl # CSS 变量（暗色/浅色双套）
-│   ├── plugins/           # Remark / Rehype 插件
-│   ├── scripts/           # 辅助脚本
-│   └── config.ts          # 站点配置
-├── .github/workflows/     # CI 部署流水线
-└── scripts/               # 构建与维护脚本
+│   │   ├── posts/          # Markdown 文章
+│   │   ├── assets/         # 内容相关图片
+│   │   └── config.ts       # 内容集合与 frontmatter schema
+│   ├── layouts/            # 页面布局
+│   ├── pages/              # 页面和路由
+│   ├── plugins/            # Remark / Rehype 插件
+│   ├── styles/             # 全局样式、文章样式和 Stylus 变量
+│   └── config.ts           # 站点、导航、个人信息和第三方服务配置
+├── admin-worker/           # Fuwari Studio 的 Cloudflare Worker
+├── scripts/                # 新建文章、文章历史、图片和内容维护脚本
+├── public/                 # 静态资源
+├── docs/images/            # README 页面截图
+└── .github/workflows/      # 构建、部署和 PR 校验
 ```
 
-## 🎨 自定义开发
+几个常改的位置：
 
-### 主题色
+- 站点标题、导航、主题色和第三方服务：`src/config.ts`
+- 文章字段定义：`src/content/config.ts`
+- 首页分页、排序和草稿过滤：`src/utils/content-utils.ts`、`src/pages/[...page].astro`
+- 文章详情页：`src/pages/posts/[...slug].astro`
+- 管理端页面：`src/pages/admin/index.astro` 和 `src/components/admin/`
 
-`src/config.ts` → `themeColor.hue`，当前值 `0`（红色）。
+## 修改主题
 
-### 浅色主题适配
+主题色的默认色相在 `src/config.ts` 的 `themeColor.hue` 中设置。颜色、浅色模式和文章渲染相关样式主要位于 `src/styles/`。
 
-在 `src/styles/main.css` 末尾添加 `html.light` 前缀的覆盖规则。所有 Tailwind 颜色类（`text-white/*`、`text-gray-*` 等）都需要对应覆盖，**必须加 `!important`**。
+项目里的 Svelte 组件仍以传统语法为主，新增组件时请沿用现有写法，并在修改后至少运行一次构建。涉及内容 schema、文章脚本或管理端 API 时，最好同时检查对应的工作流和部署配置。
 
-### 新增组件检查清单
+## 致谢与许可
 
-```bash
-# 搜索组件中使用的 Tailwind 颜色类
-grep -rn 'text-white\|text-gray\|text-neutral' src/components/
+本站的基础主题来自 [Fuwari](https://github.com/saicaca/fuwari)，在此基础上进行了页面、内容系统、工具和发布流程的定制。
 
-# 如果有新的透明度级别，在 main.css 补充 html.light 覆盖
-```
-
-## ⚠️ 常见坑
-
-- **Svelte 组件**：使用 `onclick` 而非 `on:click`
-- **CSS 覆盖**：不加 `!important` 会被 Tailwind 级联覆盖
-- **Patch 工具**：`\t` 会被写成字面量，必须用真实 tab
-- **服务器 Python**：博客服务必须用 Python 3.11（系统 Python 3.6 不支持 `--directory` 且会挂死）
-- **构建失败排查**：Actions 日志不可见时，回退到成功提交 → 逐个文件增量推送
-
-## 📄 致谢
-
-- [Fuwari](https://github.com/saicaca/fuwari) — 原始博客主题
-- [Hermes Agent](https://github.com/NousResearch/hermes-agent) — AI 代理运维
-- 所有为此项目做出贡献的开发者
+项目内容与代码按 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) 许可发布；如果要转载文章或复用内容，请保留署名并遵守非商业使用与相同方式共享条款。
